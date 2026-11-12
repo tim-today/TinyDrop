@@ -13,7 +13,7 @@ import (
 	"github.com/tim-today/TinyDrop/internal"
 )
 
-var Version = "dev"
+var Version = "v1.0.1"
 
 func init() {
 	runtime.LockOSThread()
@@ -48,6 +48,7 @@ func main() {
 	}
 
 	sm := internal.NewServerManager(cm)
+	sm.AppVersion = Version
 	sm.StartAndKeepAlive()
 
 	cfg := cm.GetSnapshot()

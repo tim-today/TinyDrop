@@ -26,18 +26,20 @@ import (
 var webEmbed embed.FS
 
 type ServerManager struct {
-	CM         *ConfigManager
-	mu         sync.Mutex
-	httpServer *http.Server
+	CM          *ConfigManager
+	AppVersion  string
+	mu          sync.Mutex
+	httpServer  *http.Server
 	runningPort int
-	lastError  string
-	stopChan   chan struct{}
+	lastError   string
+	stopChan    chan struct{}
 }
 
 func NewServerManager(cm *ConfigManager) *ServerManager {
 	return &ServerManager{
-		CM:       cm,
-		stopChan: make(chan struct{}),
+		CM:         cm,
+		AppVersion: "v1.0.1",
+		stopChan:   make(chan struct{}),
 	}
 }
 
@@ -246,6 +248,8 @@ func (sm *ServerManager) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 	resp := map[string]interface{}{
 		"app_name":          "TinyDrop",
+		"version":           sm.AppVersion,
+		"github_url":        "https://github.com/tim-today/TinyDrop",
 		"is_admin":          admin,
 		"is_authed":         authed,
 		"share_enabled":     cfg.ShareEnabled,
