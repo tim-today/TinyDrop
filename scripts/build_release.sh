@@ -91,7 +91,7 @@ EOF
     tar -czf "TinyDrop_${VERSION}_darwin_amd64.tar.gz" TinyDrop_darwin_amd64
     tar -czf "TinyDrop_${VERSION}_darwin_arm64.tar.gz" TinyDrop_darwin_arm64
     tar -czf "TinyDrop_${VERSION}_darwin_universal.tar.gz" TinyDrop_darwin_universal
-    zip -r -q "TinyDrop_${VERSION}_macOS_App_Universal.zip" TinyDrop.app
+    zip -r -y -q "TinyDrop_${VERSION}_macOS_App_Universal.zip" TinyDrop.app
     rm -rf TinyDrop.app TinyDrop_darwin_amd64 TinyDrop_darwin_arm64 TinyDrop_darwin_universal
   )
 fi
