@@ -1,0 +1,1922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TinyDrop (TD) · Instant Cross-Device File Sharing</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <style>
+    :root {
+      --bg: #07090e;
+      --card: rgba(15, 20, 32, 0.78);
+      --card-hover: rgba(24, 32, 50, 0.85);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(99, 102, 241, 0.45);
+      --text: #f8fafc;
+      --muted: #8b9bb4;
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --accent: #06b6d4;
+      --success: #10b981;
+      --danger: #f43f5e;
+      --warning: #f59e0b;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(at 12% 8%, rgba(99, 102, 241, 0.16) 0px, transparent 48%),
+        radial-gradient(at 88% 12%, rgba(6, 182, 212, 0.13) 0px, transparent 45%),
+        radial-gradient(at 50% 95%, rgba(168, 85, 247, 0.09) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body { padding-bottom: 52px; }
+    .container {
+      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* Glassmorphism Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 18px;
+      background: var(--card);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .logo-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+    }
+    .logo-icon img { width: 100%; height: 100%; display: block; }
+    .brand-title { min-width: 0; }
+    .brand-title h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 2px 9px;
+      border-radius: 99px;
+      font-weight: 600;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+    }
+    .badge-admin { background: rgba(99, 102, 241, 0.16); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.38); }
+    .badge-client { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+    .badge-readonly { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+    .brand-sub {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Modern Buttons & Inputs */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 13px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: rgba(30, 41, 59, 0.72);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.16s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: rgba(51, 65, 85, 0.85);
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-1px);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+    .btn-danger {
+      background: rgba(244, 63, 94, 0.14);
+      color: #fda4af;
+      border-color: rgba(244, 63, 94, 0.32);
+    }
+    .btn-danger:hover {
+      background: rgba(244, 63, 94, 0.25);
+      border-color: rgba(244, 63, 94, 0.5);
+    }
+    .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+
+    .input {
+      background: rgba(7, 9, 14, 0.75);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 11px;
+      border-radius: 9px;
+      font-size: 13px;
+      outline: none;
+      min-width: 0;
+      transition: border-color 0.15s;
+    }
+    .input:focus { border-color: var(--primary); }
+
+    /* PC Control Grid (Collapsible) */
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1.45fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 860px) {
+      .admin-grid { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--card);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      min-width: 0;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.45);
+    }
+    .panel-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #f1f5f9;
+      gap: 8px;
+    }
+    .config-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .config-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-bottom: 11px;
+      border-bottom: 1px dashed rgba(255,255,255,0.06);
+    }
+    .config-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .config-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
+    .config-label span { font-size: 11px; font-weight: 400; color: var(--muted); word-break: break-all; }
+
+    /* Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #1e293b;
+      border: 1px solid var(--border);
+      transition: .2s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute; content: "";
+      height: 18px; width: 18px;
+      left: 2px; bottom: 2px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background: linear-gradient(135deg, #6366f1, #06b6d4); border-color: transparent; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    /* QR & Network Panel */
+    .qr-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+    }
+    .qr-canvas-wrap {
+      background: #ffffff;
+      padding: 11px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+    .addr-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 100%;
+    }
+    .addr-chip {
+      font-size: 12px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      background: rgba(7, 9, 14, 0.65);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      flex: 1;
+      text-align: center;
+      min-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .addr-chip.active {
+      border-color: var(--primary);
+      color: #c7d2fe;
+      background: rgba(99, 102, 241, 0.16);
+      font-weight: 600;
+    }
+    .url-copy-bar {
+      display: flex;
+      width: 100%;
+      gap: 6px;
+    }
+    .url-copy-bar input { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+
+    /* Dropzone & Quick Add */
+    .dropzone {
+      border: 1.5px dashed rgba(139, 155, 180, 0.35);
+      background: linear-gradient(180deg, rgba(15, 20, 32, 0.68) 0%, rgba(15, 20, 32, 0.45) 100%);
+      backdrop-filter: blur(12px);
+      border-radius: var(--radius);
+      padding: 18px 14px;
+      text-align: center;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+    }
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(6, 182, 212, 0.12);
+      box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.12);
+    }
+    .dropzone-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: #f1f5f9; }
+    .dropzone-sub { font-size: 12px; color: var(--muted); margin-bottom: 13px; }
+    .dropzone-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+    /* Shared Textbox / Clipboard Pad */
+    .textpad-card {
+      background: var(--card);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.45);
+    }
+    .textpad-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .textpad-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .textpad-meta {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .textpad-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .textpad-area {
+      width: 100%;
+      min-height: 88px;
+      max-height: 320px;
+      resize: vertical;
+      background: rgba(7, 9, 14, 0.72);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 10px 12px;
+      color: #f1f5f9;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .textpad-area:focus {
+      border-color: var(--primary);
+    }
+
+    /* Upload Progress Queue */
+    .upload-queue {
+      background: var(--card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .upload-queue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .upload-task {
+      background: rgba(7, 9, 14, 0.65);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    .upload-task:last-child { margin-bottom: 0; }
+    .upload-task-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 12px;
+      margin-bottom: 7px;
+    }
+    .upload-task-name {
+      font-weight: 600;
+      color: #e2e8f0;
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .upload-task-meta {
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #6366f1, #06b6d4, #10b981);
+      transition: width 0.15s ease;
+    }
+
+    /* File Browser Card */
+    .browser-card {
+      background: var(--card);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      width: 100%;
+      box-shadow: 0 12px 34px -10px rgba(0, 0, 0, 0.55);
+    }
+    .toolbar {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .cat-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      max-width: 100%;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .cat-tabs::-webkit-scrollbar { display: none; }
+    .cat-tab {
+      padding: 5px 11px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: rgba(7, 9, 14, 0.55);
+      color: var(--muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .cat-tab:hover { color: var(--text); }
+    .cat-tab.active {
+      background: rgba(99, 102, 241, 0.18);
+      color: #a5b4fc;
+      border-color: rgba(99, 102, 241, 0.42);
+    }
+    .breadcrumbs {
+      padding: 9px 16px;
+      background: rgba(7, 9, 14, 0.45);
+      border-bottom: 1px solid var(--border);
+      font-size: 12.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      word-break: break-all;
+    }
+    .crumb {
+      color: #818cf8;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .crumb:hover { text-decoration: underline; }
+    .crumb-sep { color: var(--muted); }
+
+    /* Compact Responsive File List */
+    .file-list-head {
+      display: flex;
+      align-items: center;
+      padding: 9px 16px;
+      background: rgba(7, 9, 14, 0.3);
+      border-bottom: 1px solid var(--border);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+      color: var(--muted);
+      gap: 10px;
+    }
+    .file-items {
+      display: flex;
+      flex-direction: column;
+    }
+    .file-item-row {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      gap: 12px;
+      transition: background 0.12s;
+      min-width: 0;
+    }
+    .file-item-row:last-child { border-bottom: none; }
+    .file-item-row:hover { background: var(--card-hover); }
+    .file-check-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .file-check-wrap input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .file-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+    .file-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      background: #0b0f19;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+    }
+    .file-icon svg { width: 22px; height: 22px; }
+    .file-ext-badge {
+      position: absolute;
+      bottom: -3px;
+      right: -4px;
+      font-size: 8px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 4px;
+      line-height: 1.1;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.55);
+    }
+    .file-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .file-title-line {
+      font-size: 14px;
+      font-weight: 500;
+      color: #f1f5f9;
+      line-height: 1.35;
+      word-break: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: color 0.12s;
+    }
+    .file-main:hover .file-title-line { color: #a5b4fc; }
+    .file-sub-line {
+      font-size: 11.5px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .mode-tag {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 5px;
+      background: rgba(99, 102, 241, 0.14);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }
+    .file-chevron {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      flex-shrink: 0;
+      padding-left: 4px;
+    }
+    .empty-state {
+      padding: 48px 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13.5px;
+    }
+
+    /* Modals (Login & File Detail Sheet) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 9, 14, 0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 100;
+    }
+    .modal-card {
+      background: #111624;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 24px 20px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.65);
+      animation: popIn 0.16s ease-out;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .pin-input {
+      width: 100%;
+      text-align: center;
+      font-size: 24px;
+      letter-spacing: 8px;
+      font-weight: 700;
+      padding: 11px;
+      margin: 16px 0;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #07090e;
+      color: #818cf8;
+      outline: none;
+    }
+    .pin-input:focus { border-color: var(--primary); }
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .detail-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f8fafc;
+      word-break: break-all;
+      line-height: 1.35;
+    }
+    .detail-meta-list {
+      background: rgba(7, 9, 14, 0.65);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 18px;
+      font-size: 12.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .detail-meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .detail-meta-row span:first-child { color: var(--muted); flex-shrink: 0; }
+    .detail-meta-row span:last-child { color: #e2e8f0; text-align: right; word-break: break-all; }
+    .detail-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(17, 22, 36, 0.95);
+      border: 1px solid var(--border-highlight);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.55);
+      z-index: 200;
+      display: none;
+      max-width: 92vw;
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      .container { padding: 10px; }
+      .header { padding: 12px; }
+      .panel { padding: 14px; }
+      .file-item-row { padding: 11px 12px; }
+      .file-list-head { padding: 8px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo-icon"><img src="/logo.svg" alt="TD"></div>
+        <div class="brand-title">
+          <h1>
+            TinyDrop
+            <span id="roleBadge" class="badge badge-client">Loading</span>
+          </h1>
+          <div class="brand-sub">Instant LAN & Tailscale File Hub · Resumable Stream</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="keepAliveBadge" class="badge badge-client" title="Auto Keep-Alive Watchdog Active">⚡ Keep-Alive</span>
+        <button class="btn btn-sm" onclick="refreshAll()">🔄 Refresh</button>
+        <button id="openTempFinderBtn" class="btn btn-sm" style="display:none;" onclick="openFinder('', '', true)">📂 Temp Folder</button>
+        <button id="toggleAdminConfigBtn" class="btn btn-sm" style="display:none;" onclick="toggleAdminSection()">⚙️ Settings</button>
+      </div>
+    </header>
+
+    <!-- PC Server Admin Panel (Default Hidden, Toggle via Settings Button) -->
+    <section id="adminSection" class="admin-grid" style="display:none;">
+      <div class="panel">
+        <div class="panel-title">
+          <span>⚙️ Sharing & Access Control</span>
+          <span style="font-size:11px;color:var(--muted);font-weight:normal;">Applied Instantly</span>
+        </div>
+        <div class="config-rows">
+          <div class="config-row">
+            <div class="config-label">
+              Enable File Sharing
+              <span>When disabled, external clients cannot browse or download files</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="cfgShareEnabled" onchange="saveConfig({share_enabled: this.checked})">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="config-row">
+            <div class="config-label">
+              6-Digit Access PIN
+              <span>Clients authenticate once and stay signed in until PIN changes</span>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="text" id="cfgPassword" class="input" maxlength="6" style="width:88px;text-align:center;font-weight:700;letter-spacing:2px;color:#a5b4fc;">
+              <button class="btn btn-sm" onclick="savePassword()">Save</button>
+              <button class="btn btn-sm" onclick="saveConfig({random_password: true})">🎲 Random</button>
+            </div>
+          </div>
+
+          <div class="config-row">
+            <div class="config-label">
+              Allow Client Upload & Delete
+              <span>Default off (Read-Only); enable to grant full management to clients</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="cfgAllowEdit" onchange="saveConfig({allow_client_edit: this.checked})">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="config-row">
+            <div class="config-label">
+              Host File Share Mode
+              <span>Zero-Copy links original path without disk overhead; Copy archives to temp</span>
+            </div>
+            <select id="cfgShareMode" class="input" onchange="saveConfig({share_mode: this.value})">
+              <option value="map">🔗 Zero-Copy Path Mapping</option>
+              <option value="copy">📦 Copy to Temp Folder</option>
+            </select>
+          </div>
+
+          <div class="config-row">
+            <div class="config-label">
+              Local Temp Share Directory
+              <span id="cfgTempDirText">-</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-sm" onclick="pickSystem('temp_dir')">Change</button>
+              <button class="btn btn-sm" onclick="openFinder('', '', true)">Reveal</button>
+            </div>
+          </div>
+
+          <div class="config-row">
+            <div class="config-label">
+              HTTP Port & Watchdog
+              <span>Default 20999, supports custom port & automatic service recovery</span>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" id="cfgPort" class="input" style="width:86px;" min="1024" max="65535">
+              <button class="btn btn-sm" onclick="changePort()">Apply</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code & Network Panel -->
+      <div class="panel">
+        <div class="panel-title">
+          <span>📱 Scan to Connect (LAN & Tailscale)</span>
+        </div>
+        <div class="qr-box">
+          <div id="addrTabs" class="addr-tabs"></div>
+          <div class="qr-canvas-wrap">
+            <div id="qrcode"></div>
+          </div>
+          <div class="url-copy-bar">
+            <input type="text" id="shareUrlInput" class="input" readonly>
+            <button class="btn btn-sm btn-primary" onclick="copyShareUrl()">Copy</button>
+          </div>
+          <div style="font-size:12px;color:var(--muted);text-align:center;">
+            Access PIN: <strong id="qrPwdDisplay" style="color:#a5b4fc;letter-spacing:1.5px;">------</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Drag & Drop / Quick Add Zone -->
+    <section id="dropzoneSection" class="dropzone" style="display:none;">
+      <div class="dropzone-title">📥 Drop Files or Folders Here to Share Instantly</div>
+      <div class="dropzone-sub" id="dropzoneSub">Supports multi-select, folder drag-and-drop & 4MB chunked resumable uploads for large files</div>
+      <div class="dropzone-btns">
+        <button id="btnPcPickFile" class="btn btn-sm btn-primary" style="display:none;" onclick="pickSystem('file')">➕ Share Local Files</button>
+        <button id="btnPcPickDir" class="btn btn-sm btn-primary" style="display:none;" onclick="pickSystem('dir')">📁 Share Local Folder</button>
+        <button class="btn btn-sm" onclick="document.getElementById('uploadFilesInput').click()">⬆️ Upload Files</button>
+        <button class="btn btn-sm" onclick="document.getElementById('uploadDirInput').click()">📂 Upload Folder</button>
+        <input type="file" id="uploadFilesInput" multiple style="display:none;" onchange="uploadFileList(this.files); this.value='';">
+        <input type="file" id="uploadDirInput" webkitdirectory directory multiple style="display:none;" onchange="uploadFileList(this.files); this.value='';">
+      </div>
+    </section>
+
+    <!-- Shared Textbox / Cross-Device Clipboard -->
+    <section id="textpadSection" class="textpad-card">
+      <div class="textpad-header">
+        <div class="textpad-title">
+          <span>📋 Shared Textbox</span>
+          <span id="textpadCharCount" class="textpad-meta">0 chars</span>
+        </div>
+        <div class="textpad-actions">
+          <button class="btn btn-sm btn-primary" onclick="copySharedText()">📋 Copy Text</button>
+          <button id="btnPasteText" class="btn btn-sm" style="display:none;" onclick="pasteAndSyncText()">📥 Paste & Sync</button>
+          <button id="btnSaveText" class="btn btn-sm" style="display:none;" onclick="saveSharedText()">💾 Save / Sync</button>
+          <button id="btnClearText" class="btn btn-sm btn-danger" style="display:none;" onclick="clearSharedText()">🗑️ Clear</button>
+        </div>
+      </div>
+      <textarea id="sharedTextInput" class="textpad-area" placeholder="Paste or type long text, links, snippets, or commands here to share across PC and mobile devices..." oninput="onSharedTextInput()"></textarea>
+    </section>
+
+    <!-- Resumable Upload Progress Queue -->
+    <section id="uploadQueueSection" class="upload-queue">
+      <div class="upload-queue-header">
+        <span>🚀 Transfer Queue (Resumable Chunked Stream)</span>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-sm" onclick="clearCompletedUploads()">Clear Completed</button>
+          <button class="btn btn-sm btn-danger" onclick="clearAllUploads()">Clear All</button>
+        </div>
+      </div>
+      <div id="uploadTasksList"></div>
+    </section>
+
+    <!-- File List Card -->
+    <section class="browser-card">
+      <div class="toolbar">
+        <div class="cat-tabs" id="catTabs">
+          <div class="cat-tab active" data-cat="all" onclick="setCategory('all')">All</div>
+          <div class="cat-tab" data-cat="dir" onclick="setCategory('dir')">📁 Folders</div>
+          <div class="cat-tab" data-cat="image" onclick="setCategory('image')">🖼️ Images</div>
+          <div class="cat-tab" data-cat="video" onclick="setCategory('video')">🎬 Videos</div>
+          <div class="cat-tab" data-cat="audio" onclick="setCategory('audio')">🎵 Audio</div>
+          <div class="cat-tab" data-cat="doc" onclick="setCategory('doc')">📄 Docs</div>
+          <div class="cat-tab" data-cat="archive" onclick="setCategory('archive')">🗜️ Archives</div>
+          <div class="cat-tab" data-cat="code" onclick="setCategory('code')">💻 Code</div>
+        </div>
+        <div id="batchActions" style="display:none;gap:6px;align-items:center;">
+          <button class="btn btn-sm" onclick="toggleSelectAll()">Select All</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteSelected()">🗑️ Delete (<span id="selectedCount">0</span>)</button>
+        </div>
+      </div>
+
+      <!-- Breadcrumbs -->
+      <div class="breadcrumbs" id="breadcrumbs">
+        <span class="crumb" onclick="navigateRoot()">🏠 Root</span>
+      </div>
+
+      <!-- Compact File List Header -->
+      <div class="file-list-head">
+        <div id="thCheckbox" class="file-check-wrap" style="display:none;">
+          <input type="checkbox" id="checkAllBox" onchange="toggleSelectAll(this.checked)">
+        </div>
+        <div style="flex:1;">Name (Tap item for details & download)</div>
+      </div>
+
+      <!-- File Items Container -->
+      <div id="fileTableBody" class="file-items">
+        <div class="empty-state">Loading shared files...</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- File Detail & Download Confirmation Modal -->
+  <div id="fileDetailModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeFileModal()">
+    <div class="modal-card">
+      <div class="detail-header">
+        <div id="detailIcon"></div>
+        <div class="detail-title" id="detailName">-</div>
+      </div>
+      <div class="detail-meta-list">
+        <div class="detail-meta-row">
+          <span>Category</span>
+          <span id="detailType">-</span>
+        </div>
+        <div class="detail-meta-row">
+          <span>Size</span>
+          <span id="detailSize">-</span>
+        </div>
+        <div class="detail-meta-row">
+          <span>Modified</span>
+          <span id="detailTime">-</span>
+        </div>
+        <div class="detail-meta-row" id="detailModeRow">
+          <span>Share Mode</span>
+          <span id="detailMode">-</span>
+        </div>
+      </div>
+      <div class="detail-actions">
+        <a id="detailDownloadBtn" class="btn btn-primary" style="width:100%;padding:11px;" href="#" download onclick="closeFileModal()">⬇️ Download File</a>
+        <div style="display:flex;gap:8px;">
+          <button id="detailFinderBtn" class="btn" style="flex:1;display:none;" onclick="openDetailFinder()">📂 Reveal in OS</button>
+          <button id="detailDeleteBtn" class="btn btn-danger" style="flex:1;display:none;" onclick="deleteDetailItem()">🗑️ Remove</button>
+          <button class="btn" style="flex:1;" onclick="closeFileModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client Password Modal -->
+  <div id="loginModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="text-align:center;">
+      <div class="logo-icon" style="margin: 0 auto 12px;"><img src="/logo.svg" alt="TD"></div>
+      <h2 style="font-size:18px;margin-bottom:6px;">Enter Access PIN</h2>
+      <p style="font-size:12px;color:var(--muted);">Enter the 6-digit PIN code shown on the host. Your session stays active until the host changes the PIN.</p>
+      <input type="tel" id="loginPinInput" class="pin-input" maxlength="6" placeholder="••••••" onkeyup="if(event.key==='Enter') submitLogin()">
+      <div id="loginError" style="color:var(--danger);font-size:12px;margin-bottom:10px;min-height:18px;"></div>
+      <button class="btn btn-primary" style="width:100%;padding:11px;" onclick="submitLogin()">🔓 Unlock TinyDrop</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/qrcode.min.js"></script>
+  <script>
+    let state = {
+      isAdmin: false,
+      isAuthed: false,
+      canEdit: false,
+      shareEnabled: true,
+      showAdminPanel: false,
+      category: 'all',
+      currentItemID: '',
+      currentItemName: '',
+      currentSubPath: '',
+      entries: [],
+      selected: new Set(),
+      addresses: [],
+      activeAddrIdx: 0,
+      activeDetailItem: null
+    };
+
+    function toggleAdminSection() {
+      if (!state.isAdmin) return;
+      state.showAdminPanel = !state.showAdminPanel;
+      const sec = document.getElementById('adminSection');
+      const btn = document.getElementById('toggleAdminConfigBtn');
+      sec.style.display = state.showAdminPanel ? 'grid' : 'none';
+      if (state.showAdminPanel) {
+        btn.classList.add('btn-primary');
+        btn.textContent = '⚙️ Hide Settings';
+        renderAddressesAndQR();
+      } else {
+        btn.classList.remove('btn-primary');
+        btn.textContent = '⚙️ Settings';
+      }
+    }
+
+    function showToast(msg, duration = 2600) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => { t.style.display = 'none'; }, duration);
+    }
+
+    function getAuthHeaders() {
+      const headers = { 'Content-Type': 'application/json' };
+      const savedToken = localStorage.getItem('pd_auth_token');
+      if (savedToken) headers['X-Auth-Token'] = savedToken;
+      return headers;
+    }
+
+    async function loadStatus() {
+      const res = await fetch('/api/status', { headers: getAuthHeaders() });
+      const data = await res.json();
+      state.isAdmin = !!data.is_admin;
+      state.isAuthed = !!data.is_authed;
+      state.canEdit = !!data.can_edit;
+      state.shareEnabled = !!data.share_enabled;
+
+      const roleBadge = document.getElementById('roleBadge');
+      if (state.isAdmin) {
+        roleBadge.textContent = 'PC Host';
+        roleBadge.className = 'badge badge-admin';
+      } else if (state.canEdit) {
+        roleBadge.textContent = 'Client (Read & Write)';
+        roleBadge.className = 'badge badge-client';
+      } else {
+        roleBadge.textContent = 'Client (Read-Only)';
+        roleBadge.className = 'badge badge-readonly';
+      }
+
+      document.getElementById('adminSection').style.display = (state.isAdmin && state.showAdminPanel) ? 'grid' : 'none';
+      document.getElementById('openTempFinderBtn').style.display = state.isAdmin ? 'inline-flex' : 'none';
+      document.getElementById('toggleAdminConfigBtn').style.display = state.isAdmin ? 'inline-flex' : 'none';
+      document.getElementById('btnPcPickFile').style.display = state.isAdmin ? 'inline-flex' : 'none';
+      document.getElementById('btnPcPickDir').style.display = state.isAdmin ? 'inline-flex' : 'none';
+
+      document.getElementById('dropzoneSection').style.display = state.canEdit ? 'block' : 'none';
+      document.getElementById('batchActions').style.display = state.canEdit ? 'flex' : 'none';
+      document.getElementById('thCheckbox').style.display = state.canEdit ? 'flex' : 'none';
+
+      // Shared Textbox state & permissions
+      const txtEl = document.getElementById('sharedTextInput');
+      if (document.activeElement !== txtEl) {
+        txtEl.value = data.shared_text || '';
+        updateTextCharCount();
+      }
+      txtEl.readOnly = !state.canEdit;
+      document.getElementById('btnPasteText').style.display = state.canEdit ? 'inline-flex' : 'none';
+      document.getElementById('btnSaveText').style.display = state.canEdit ? 'inline-flex' : 'none';
+      document.getElementById('btnClearText').style.display = state.canEdit ? 'inline-flex' : 'none';
+
+      if (state.isAdmin) {
+        document.getElementById('cfgShareEnabled').checked = !!data.share_enabled;
+        document.getElementById('cfgPassword').value = data.password || '';
+        document.getElementById('qrPwdDisplay').textContent = data.password || '------';
+        document.getElementById('cfgAllowEdit').checked = !!data.allow_client_edit;
+        document.getElementById('cfgShareMode').value = data.share_mode || 'map';
+        document.getElementById('cfgTempDirText').textContent = data.temp_dir || '';
+        document.getElementById('cfgPort').value = data.port || 20999;
+        state.addresses = data.addresses || [];
+        renderAddressesAndQR();
+      }
+
+      if (!state.isAdmin && !state.isAuthed) {
+        document.getElementById('loginModal').style.display = 'flex';
+        return false;
+      } else {
+        document.getElementById('loginModal').style.display = 'none';
+        return true;
+      }
+    }
+
+    function renderAddressesAndQR() {
+      const tabsEl = document.getElementById('addrTabs');
+      tabsEl.innerHTML = '';
+      if (!state.addresses || state.addresses.length === 0) return;
+      if (state.activeAddrIdx >= state.addresses.length) state.activeAddrIdx = 0;
+
+      state.addresses.forEach((addr, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'addr-chip' + (idx === state.activeAddrIdx ? ' active' : '');
+        const icon = addr.type === 'tailscale' ? '🌐 ' : '📶 ';
+        chip.textContent = icon + addr.name + ' (' + addr.ip + ')';
+        chip.onclick = () => {
+          state.activeAddrIdx = idx;
+          renderAddressesAndQR();
+        };
+        tabsEl.appendChild(chip);
+      });
+
+      const currentUrl = state.addresses[state.activeAddrIdx].url;
+      document.getElementById('shareUrlInput').value = currentUrl;
+      const qrContainer = document.getElementById('qrcode');
+      qrContainer.innerHTML = '';
+      if (window.renderQRCode) {
+        window.renderQRCode(qrContainer, currentUrl, 148);
+      }
+    }
+
+    function copyShareUrl() {
+      const input = document.getElementById('shareUrlInput');
+      input.select();
+      navigator.clipboard.writeText(input.value);
+      showToast('✅ Copied URL: ' + input.value);
+    }
+
+    function updateTextCharCount() {
+      const val = document.getElementById('sharedTextInput').value || '';
+      document.getElementById('textpadCharCount').textContent = `${val.length} chars`;
+    }
+
+    function onSharedTextInput() {
+      updateTextCharCount();
+      if (!state.canEdit) return;
+      clearTimeout(window.__textSyncTimer);
+      window.__textSyncTimer = setTimeout(() => {
+        saveSharedText(true);
+      }, 600);
+    }
+
+    async function saveSharedText(silent = false) {
+      if (!state.canEdit) return;
+      const text = document.getElementById('sharedTextInput').value;
+      const res = await fetch('/api/text', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ text })
+      });
+      if (res.ok && !silent) {
+        showToast('✅ Shared text synced');
+      }
+    }
+
+    function copySharedText() {
+      const el = document.getElementById('sharedTextInput');
+      const val = el.value;
+      if (!val) {
+        showToast('⚠️ Textbox is empty');
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(val).then(() => {
+          showToast('✅ Copied shared text to clipboard');
+        }).catch(() => {
+          el.select();
+          document.execCommand('copy');
+          showToast('✅ Copied shared text to clipboard');
+        });
+      } else {
+        el.select();
+        document.execCommand('copy');
+        showToast('✅ Copied shared text to clipboard');
+      }
+    }
+
+    async function pasteAndSyncText() {
+      if (!state.canEdit) return;
+      try {
+        const clip = await navigator.clipboard.readText();
+        if (clip) {
+          document.getElementById('sharedTextInput').value = clip;
+          updateTextCharCount();
+          await saveSharedText(false);
+        }
+      } catch (_) {
+        document.getElementById('sharedTextInput').focus();
+        showToast('💡 Press Ctrl+V / Cmd+V in the textbox to paste');
+      }
+    }
+
+    async function clearSharedText() {
+      if (!state.canEdit) return;
+      document.getElementById('sharedTextInput').value = '';
+      updateTextCharCount();
+      await saveSharedText(true);
+      showToast('🗑️ Cleared shared text');
+    }
+
+    async function submitLogin() {
+      const pwd = document.getElementById('loginPinInput').value.trim();
+      const errEl = document.getElementById('loginError');
+      errEl.textContent = '';
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        errEl.textContent = data.error || 'Authentication failed';
+        return;
+      }
+      if (data.token) {
+        localStorage.setItem('pd_auth_token', data.token);
+      }
+      document.getElementById('loginModal').style.display = 'none';
+      showToast('🎉 Access granted');
+      await refreshAll();
+    }
+
+    async function loadFiles() {
+      const params = new URLSearchParams({
+        item_id: state.currentItemID,
+        sub_path: state.currentSubPath,
+        category: state.category
+      });
+      const res = await fetch('/api/files?' + params.toString(), { headers: getAuthHeaders() });
+      if (res.status === 401) {
+        document.getElementById('loginModal').style.display = 'flex';
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) {
+        showToast('⚠️ ' + (data.error || 'Failed to load files'));
+        return;
+      }
+      state.entries = data.entries || [];
+      state.selected.clear();
+      document.getElementById('checkAllBox').checked = false;
+      updateSelectedCount();
+      renderBreadcrumbs();
+      renderFileTable();
+    }
+
+    function renderBreadcrumbs() {
+      const el = document.getElementById('breadcrumbs');
+      let html = `<span class="crumb" onclick="navigateRoot()">🏠 Root</span>`;
+      if (state.currentItemID) {
+        html += `<span class="crumb-sep">/</span>`;
+        html += `<span class="crumb" onclick="navigateFolder('${state.currentItemID}', '${escapeHtml(state.currentItemName)}', '')">${escapeHtml(state.currentItemName)}</span>`;
+        if (state.currentSubPath) {
+          const parts = state.currentSubPath.split('/').filter(Boolean);
+          let acc = '';
+          parts.forEach(p => {
+            acc = acc ? (acc + '/' + p) : p;
+            html += `<span class="crumb-sep">/</span>`;
+            html += `<span class="crumb" onclick="navigateFolder('${state.currentItemID}', '${escapeHtml(state.currentItemName)}', '${escapeHtml(acc)}')">${escapeHtml(p)}</span>`;
+          });
+        }
+      }
+      el.innerHTML = html;
+    }
+
+    function getFileIconHtml(item) {
+      if (item.is_dir) {
+        return `<span class="file-icon" style="background:rgba(245,158,11,0.14);border-color:rgba(245,158,11,0.3);">
+          <svg viewBox="0 0 24 24" fill="#f59e0b"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+        </span>`;
+      }
+
+      const name = (item.name || '').toLowerCase();
+      const dotIdx = name.lastIndexOf('.');
+      const ext = dotIdx > 0 ? name.slice(dotIdx + 1) : '';
+      const badgeText = ext ? ext.slice(0, 4).toUpperCase() : '';
+
+      const specs = {
+        pdf:  { color: '#ef4444', bg: 'rgba(239,68,68,0.14)', label: 'PDF', svg: '<path fill="#ef4444" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-2.5 4.5c0 .8-.7 1.5-1.5 1.5H8v2H6.5v-5H9c.8 0 1.5.7 1.5 1.5zm5 2c0 1.4-1.1 2.5-2.5 2.5h-1.5v-5H13c1.4 0 2.5 1.1 2.5 2.5zm4-1.5h-2v1h1.5v1.5H17.5v2H16v-5h3.5v.5z"/>' },
+        doc:  { color: '#3b82f6', bg: 'rgba(59,130,246,0.14)', label: 'DOC', svg: '<path fill="#3b82f6" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm1.2 14h-1.4l-1.8-5.2L10.2 16H8.8L7 10h1.5l1.1 4 1.7-4h1.4l1.7 4 1.1-4H17l-1.8 6zM13 9V3.5L18.5 9H13z"/>' },
+        docx: { color: '#3b82f6', bg: 'rgba(59,130,246,0.14)', label: 'DOCX', svg: '<path fill="#3b82f6" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm1.2 14h-1.4l-1.8-5.2L10.2 16H8.8L7 10h1.5l1.1 4 1.7-4h1.4l1.7 4 1.1-4H17l-1.8 6zM13 9V3.5L18.5 9H13z"/>' },
+        xls:  { color: '#10b981', bg: 'rgba(16,185,129,0.14)', label: 'XLS', svg: '<path fill="#10b981" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm1.7 7h-1.7l-1.5-2.3L10 16H8.3l2.4-3.5L8.5 9h1.7l1.3 2.1L12.8 9h1.7l-2.2 3.5L14.7 16z"/>' },
+        xlsx: { color: '#10b981', bg: 'rgba(16,185,129,0.14)', label: 'XLSX', svg: '<path fill="#10b981" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm1.7 7h-1.7l-1.5-2.3L10 16H8.3l2.4-3.5L8.5 9h1.7l1.3 2.1L12.8 9h1.7l-2.2 3.5L14.7 16z"/>' },
+        csv:  { color: '#10b981', bg: 'rgba(16,185,129,0.14)', label: 'CSV', svg: '<path fill="#10b981" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm6 4h-4v-2h4v2zm0-4h-4v-2h4v2zm-1-4V3.5L18.5 9H13z"/>' },
+        ppt:  { color: '#f97316', bg: 'rgba(249,115,22,0.14)', label: 'PPT', svg: '<path fill="#f97316" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-1 5h-2v2H8.5v-6H12c1.1 0 2 .9 2 2s-.9 2-2 2z"/>' },
+        pptx: { color: '#f97316', bg: 'rgba(249,115,22,0.14)', label: 'PPTX', svg: '<path fill="#f97316" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-1 5h-2v2H8.5v-6H12c1.1 0 2 .9 2 2s-.9 2-2 2z"/>' },
+        md:   { color: '#38bdf8', bg: 'rgba(56,189,248,0.14)', label: 'MD', svg: '<path fill="#38bdf8" d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm2 10h2v-3l1.5 2 1.5-2v3h2V9h-2l-1.5 2L7 9H5v6zm11-6v3h-2l3 3 3-3h-2V9h-2z"/>' },
+        txt:  { color: '#94a3b8', bg: 'rgba(148,163,184,0.14)', label: 'TXT', svg: '<path fill="#94a3b8" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>' },
+        dmg:  { color: '#a855f7', bg: 'rgba(168,85,247,0.14)', label: 'DMG', svg: '<path fill="#a855f7" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 13a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>' },
+        iso:  { color: '#a855f7', bg: 'rgba(168,85,247,0.14)', label: 'ISO', svg: '<path fill="#a855f7" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 13a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>' },
+        exe:  { color: '#0ea5e9', bg: 'rgba(14,165,233,0.14)', label: 'EXE', svg: '<path fill="#0ea5e9" d="M3 5.5L10.5 4v7H3V5.5zm8.5-1.7L21 2.5v8.5h-9.5V3.8zM3 12.5h7.5v7L3 18.2v-5.7zm8.5 0H21V21l-9.5-1.3v-7.2z"/>' },
+        msi:  { color: '#0ea5e9', bg: 'rgba(14,165,233,0.14)', label: 'MSI', svg: '<path fill="#0ea5e9" d="M3 5.5L10.5 4v7H3V5.5zm8.5-1.7L21 2.5v8.5h-9.5V3.8zM3 12.5h7.5v7L3 18.2v-5.7zm8.5 0H21V21l-9.5-1.3v-7.2z"/>' },
+        apk:  { color: '#22c55e', bg: 'rgba(34,197,94,0.14)', label: 'APK', svg: '<path fill="#22c55e" d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85a.637.637 0 0 0-.83.22l-1.88 3.24a11.43 11.43 0 0 0-8.94 0L5.65 5.67a.643.643 0 0 0-.87-.2c-.28.18-.37.54-.22.83L6.4 9.48A10.81 10.81 0 0 0 1 18h22a10.81 10.81 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"/>' }
+      };
+
+      if (specs[ext]) {
+        const s = specs[ext];
+        return `<span class="file-icon" style="background:${s.bg};border-color:${s.color}44;">
+          <svg viewBox="0 0 24 24">${s.svg}</svg>
+          <span class="file-ext-badge" style="background:${s.color};">${s.label}</span>
+        </span>`;
+      }
+
+      switch (item.category) {
+        case 'image':
+          return `<span class="file-icon" style="background:rgba(236,72,153,0.14);border-color:rgba(236,72,153,0.35);">
+            <svg viewBox="0 0 24 24" fill="#ec4899"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            ${badgeText ? `<span class="file-ext-badge" style="background:#ec4899;">${escapeHtml(badgeText)}</span>` : ''}
+          </span>`;
+        case 'video':
+          return `<span class="file-icon" style="background:rgba(139,92,246,0.14);border-color:rgba(139,92,246,0.35);">
+            <svg viewBox="0 0 24 24" fill="#8b5cf6"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4zm-8 11.5v-6l5.5 3-5.5 3z"/></svg>
+            ${badgeText ? `<span class="file-ext-badge" style="background:#8b5cf6;">${escapeHtml(badgeText)}</span>` : ''}
+          </span>`;
+        case 'audio':
+          return `<span class="file-icon" style="background:rgba(6,182,212,0.14);border-color:rgba(6,182,212,0.35);">
+            <svg viewBox="0 0 24 24" fill="#06b6d4"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+            ${badgeText ? `<span class="file-ext-badge" style="background:#06b6d4;">${escapeHtml(badgeText)}</span>` : ''}
+          </span>`;
+        case 'archive':
+          return `<span class="file-icon" style="background:rgba(234,179,8,0.14);border-color:rgba(234,179,8,0.35);">
+            <svg viewBox="0 0 24 24" fill="#eab308"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10h-4v-2h2v-2h-2v-2h2V8h-2V6h2v2h2v2h-2v2h2v4z"/></svg>
+            ${badgeText ? `<span class="file-ext-badge" style="background:#ca8a04;">${escapeHtml(badgeText)}</span>` : ''}
+          </span>`;
+        case 'code':
+          return `<span class="file-icon" style="background:rgba(56,189,248,0.14);border-color:rgba(56,189,248,0.35);">
+            <svg viewBox="0 0 24 24" fill="#38bdf8"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+            ${badgeText ? `<span class="file-ext-badge" style="background:#0284c7;">${escapeHtml(badgeText)}</span>` : ''}
+          </span>`;
+        case 'doc':
+          return `<span class="file-icon" style="background:rgba(59,130,246,0.14);border-color:rgba(59,130,246,0.35);">
+            <svg viewBox="0 0 24 24" fill="#3b82f6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            ${badgeText ? `<span class="file-ext-badge" style="background:#2563eb;">${escapeHtml(badgeText)}</span>` : ''}
+          </span>`;
+        default:
+          return `<span class="file-icon" style="background:rgba(148,163,184,0.12);border-color:rgba(148,163,184,0.28);">
+            <svg viewBox="0 0 24 24" fill="#94a3b8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+            ${badgeText ? `<span class="file-ext-badge" style="background:#475569;">${escapeHtml(badgeText)}</span>` : ''}
+          </span>`;
+      }
+    }
+
+    function formatSize(bytes) {
+      if (!bytes || bytes <= 0) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return (bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+    }
+
+    function formatTime(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function renderFileTable() {
+      const container = document.getElementById('fileTableBody');
+      if (!state.entries.length) {
+        container.innerHTML = `<div class="empty-state">No shared files in this directory yet</div>`;
+        return;
+      }
+
+      container.innerHTML = state.entries.map((item, idx) => {
+        const key = item.id + '::' + item.rel_path;
+        const checked = state.selected.has(key) ? 'checked' : '';
+        const iconHtml = getFileIconHtml(item);
+        const modeLabel = item.mode === 'map' ? 'Mapped' : (item.mode === 'copy' ? 'Copied' : 'Temp');
+
+        return `
+          <div class="file-item-row">
+            ${state.canEdit ? `
+              <div class="file-check-wrap" onclick="event.stopPropagation()">
+                <input type="checkbox" ${checked} onchange="toggleSelectItem('${escapeHtml(key)}', this.checked)">
+              </div>
+            ` : ''}
+            <div class="file-main" onclick="handleItemClick(${idx})">
+              ${iconHtml}
+              <div class="file-info">
+                <div class="file-title-line">${escapeHtml(item.name)}</div>
+                <div class="file-sub-line">
+                  <span>${formatSize(item.size)}</span>
+                  <span>·</span>
+                  <span>${formatTime(item.updated_at)}</span>
+                  ${!state.currentItemID ? `<span class="mode-tag">${modeLabel}</span>` : ''}
+                </div>
+              </div>
+              <div class="file-chevron">${item.is_dir ? 'Open ›' : '•••'}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function handleItemClick(idx) {
+      const item = state.entries[idx];
+      if (!item) return;
+      if (item.is_dir) {
+        const rootName = state.currentItemID ? state.currentItemName : item.name;
+        navigateFolder(item.id, rootName, item.rel_path);
+      } else {
+        openFileModal(item);
+      }
+    }
+
+    function openFileModal(item) {
+      state.activeDetailItem = item;
+      document.getElementById('detailIcon').innerHTML = getFileIconHtml(item);
+      document.getElementById('detailName').textContent = item.name;
+
+      const catNames = {
+        dir: 'Folder', image: 'Image', video: 'Video', audio: 'Audio',
+        doc: 'Document', archive: 'Archive / Image', code: 'Source Code', other: 'Binary / File'
+      };
+      document.getElementById('detailType').textContent = catNames[item.category] || 'File';
+      document.getElementById('detailSize').textContent = formatSize(item.size);
+      document.getElementById('detailTime').textContent = formatTime(item.updated_at);
+      const modeLabel = item.mode === 'map' ? 'Zero-Copy Path Mapping' : (item.mode === 'copy' ? 'Archived Copy' : 'Temp Directory');
+      document.getElementById('detailMode').textContent = modeLabel;
+
+      const token = localStorage.getItem('pd_auth_token') || '';
+      const dlUrl = `/api/files/download?item_id=${encodeURIComponent(item.id)}&rel_path=${encodeURIComponent(item.rel_path)}&token=${encodeURIComponent(token)}`;
+      const dlBtn = document.getElementById('detailDownloadBtn');
+      dlBtn.href = dlUrl;
+      dlBtn.setAttribute('download', item.name);
+
+      document.getElementById('detailFinderBtn').style.display = state.isAdmin ? 'inline-flex' : 'none';
+      document.getElementById('detailDeleteBtn').style.display = state.canEdit ? 'inline-flex' : 'none';
+      document.getElementById('fileDetailModal').style.display = 'flex';
+    }
+
+    function closeFileModal() {
+      document.getElementById('fileDetailModal').style.display = 'none';
+      state.activeDetailItem = null;
+    }
+
+    function openDetailFinder() {
+      if (!state.activeDetailItem) return;
+      openFinder(state.activeDetailItem.id, state.activeDetailItem.rel_path, false);
+    }
+
+    async function deleteDetailItem() {
+      if (!state.activeDetailItem) return;
+      const it = state.activeDetailItem;
+      closeFileModal();
+      await executeDelete([{ id: it.id, rel_path: it.rel_path }]);
+    }
+
+    function navigateRoot() {
+      state.currentItemID = '';
+      state.currentItemName = '';
+      state.currentSubPath = '';
+      loadFiles();
+    }
+
+    function navigateFolder(itemID, itemName, subPath) {
+      state.currentItemID = itemID;
+      state.currentItemName = itemName;
+      state.currentSubPath = subPath || '';
+      loadFiles();
+    }
+
+    function setCategory(cat) {
+      state.category = cat;
+      document.querySelectorAll('.cat-tab').forEach(el => {
+        el.classList.toggle('active', el.dataset.cat === cat);
+      });
+      loadFiles();
+    }
+
+    function toggleSelectItem(key, checked) {
+      if (checked) state.selected.add(key);
+      else state.selected.delete(key);
+      updateSelectedCount();
+    }
+
+    function toggleSelectAll(forceVal) {
+      const shouldSelect = typeof forceVal === 'boolean' ? forceVal : (state.selected.size < state.entries.length);
+      state.selected.clear();
+      if (shouldSelect) {
+        state.entries.forEach(it => state.selected.add(it.id + '::' + it.rel_path));
+      }
+      document.getElementById('checkAllBox').checked = shouldSelect;
+      updateSelectedCount();
+      renderFileTable();
+    }
+
+    function updateSelectedCount() {
+      document.getElementById('selectedCount').textContent = state.selected.size;
+    }
+
+    async function deleteSelected() {
+      if (state.selected.size === 0) {
+        showToast('Select items first');
+        return;
+      }
+      const targets = Array.from(state.selected).map(k => {
+        const idx = k.indexOf('::');
+        return { id: k.slice(0, idx), rel_path: k.slice(idx + 2) };
+      });
+      await executeDelete(targets);
+    }
+
+    async function executeDelete(targets) {
+      const res = await fetch('/api/files/delete', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ targets })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast('⚠️ ' + (data.error || 'Delete failed'));
+        return;
+      }
+      showToast(`🗑️ Removed ${targets.length} item(s)`);
+      await loadFiles();
+    }
+
+    async function pickSystem(type) {
+      showToast('Opening system file dialog...');
+      const res = await fetch('/api/pc/pick', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ type })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        if (type === 'temp_dir') {
+          showToast('✅ Updated temp share folder');
+          await refreshAll();
+        } else if (data.added > 0) {
+          showToast(`✅ Added ${data.added} shared item(s)`);
+          await loadFiles();
+        }
+      }
+    }
+
+    async function openFinder(itemID, relPath, tempRoot) {
+      await fetch('/api/pc/open-finder', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ item_id: itemID, rel_path: relPath, temp_root: !!tempRoot })
+      });
+    }
+
+    async function saveConfig(patch) {
+      const res = await fetch('/api/pc/config', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(patch)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast('⚠️ ' + (data.error || 'Failed to save settings'));
+        return;
+      }
+      if (data.port_changed && data.admin_url) {
+        showToast(`⚡ Switching port to ${data.new_port}, redirecting...`);
+        setTimeout(() => { window.location.href = data.admin_url; }, 700);
+        return;
+      }
+      showToast('✅ Settings updated');
+      await refreshAll();
+    }
+
+    function savePassword() {
+      const pwd = document.getElementById('cfgPassword').value.trim();
+      if (pwd.length !== 6) {
+        showToast('⚠️ PIN code must be 6 digits');
+        return;
+      }
+      saveConfig({ password: pwd });
+    }
+
+    function changePort() {
+      const p = parseInt(document.getElementById('cfgPort').value, 10);
+      if (!p || p < 1024 || p > 65535) {
+        showToast('⚠️ Enter a valid port (1024-65535)');
+        return;
+      }
+      saveConfig({ port: p });
+    }
+
+    // Chunked & Resumable Upload Engine (4MB per chunk, supports pause, resume & cancel/cleanup)
+    const CHUNK_SIZE = 4 * 1024 * 1024;
+    let uploadTasks = [];
+
+    function renderUploadQueue() {
+      const sec = document.getElementById('uploadQueueSection');
+      const listEl = document.getElementById('uploadTasksList');
+      if (uploadTasks.length === 0) {
+        sec.style.display = 'none';
+        return;
+      }
+      sec.style.display = 'block';
+      listEl.innerHTML = uploadTasks.map(t => {
+        const pct = t.size > 0 ? Math.min(100, ((t.offset / t.size) * 100)).toFixed(1) : '100.0';
+        const speedStr = t.status === 'uploading' && t.speed > 0 ? `${formatSize(t.speed)}/s` : '';
+        let statusLabel = '';
+        if (t.status === 'completed') statusLabel = '<span style="color:var(--success);">✅ Done</span>';
+        else if (t.status === 'paused') statusLabel = '<span style="color:var(--warning);">⏸️ Paused</span>';
+        else if (t.status === 'error') statusLabel = `<span style="color:var(--danger);">⚠️ ${escapeHtml(t.error || 'Interrupted')}</span>`;
+        else if (t.resumed) statusLabel = `<span style="color:#a5b4fc;">⚡ Resuming ${pct}%</span>`;
+        else statusLabel = `<span>${pct}%</span>`;
+
+        return `
+          <div class="upload-task">
+            <div class="upload-task-top">
+              <div class="upload-task-name">${escapeHtml(t.relPath)} <span style="color:var(--muted);font-weight:normal;">(${formatSize(t.offset)}/${formatSize(t.size)})</span></div>
+              <div class="upload-task-meta">
+                ${speedStr ? `<span>${speedStr}</span>` : ''}
+                ${statusLabel}
+                ${t.status === 'uploading' ? `<button class="btn btn-sm" onclick="pauseUploadTask('${t.uid}')">Pause</button>` : ''}
+                ${(t.status === 'paused' || t.status === 'error') ? `<button class="btn btn-sm btn-primary" onclick="resumeUploadTask('${t.uid}')">Resume</button>` : ''}
+                <button class="btn btn-sm btn-danger" onclick="removeUploadTask('${t.uid}')" title="Cancel & remove temporary chunk">✕ Remove</button>
+              </div>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" style="width:${pct}%;"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function clearCompletedUploads() {
+      uploadTasks = uploadTasks.filter(t => t.status !== 'completed');
+      renderUploadQueue();
+    }
+
+    async function clearAllUploads() {
+      const copy = [...uploadTasks];
+      for (const t of copy) {
+        await removeUploadTask(t.uid, true);
+      }
+      uploadTasks = [];
+      renderUploadQueue();
+      showToast('🗑️ Cleared all transfer tasks');
+    }
+
+    async function removeUploadTask(uid, silent = false) {
+      const idx = uploadTasks.findIndex(x => x.uid === uid);
+      if (idx === -1) return;
+      const t = uploadTasks[idx];
+      const wasCompleted = t.status === 'completed';
+      t.status = 'cancelled';
+      if (t.abortCtrl) t.abortCtrl.abort();
+      uploadTasks.splice(idx, 1);
+      renderUploadQueue();
+
+      if (!wasCompleted) {
+        try {
+          await fetch('/api/files/upload/cancel', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              item_id: t.itemID,
+              sub_path: t.subPath,
+              rel_path: t.relPath,
+              file_id: t.fileID
+            })
+          });
+        } catch (_) {}
+      }
+      if (!silent) showToast('🗑️ Task removed');
+    }
+
+    function pauseUploadTask(uid) {
+      const t = uploadTasks.find(x => x.uid === uid);
+      if (t && t.status === 'uploading') {
+        t.status = 'paused';
+        if (t.abortCtrl) t.abortCtrl.abort();
+        renderUploadQueue();
+      }
+    }
+
+    function resumeUploadTask(uid) {
+      const t = uploadTasks.find(x => x.uid === uid);
+      if (t && (t.status === 'paused' || t.status === 'error')) {
+        t.error = '';
+        runSingleUploadTask(t);
+      }
+    }
+
+    async function runSingleUploadTask(task) {
+      task.status = 'uploading';
+      renderUploadQueue();
+
+      try {
+        const initRes = await fetch('/api/files/upload/init', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            item_id: task.itemID,
+            sub_path: task.subPath,
+            rel_path: task.relPath,
+            file_id: task.fileID,
+            size: task.size
+          })
+        });
+        const initData = await initRes.json();
+        if (!initRes.ok || !initData.ok) {
+          throw new Error(initData.error || 'Upload init failed');
+        }
+
+        task.offset = initData.offset || 0;
+        if (task.offset > 0 && task.offset < task.size) {
+          task.resumed = true;
+          showToast(`⚡ Resuming from ${formatSize(task.offset)}`);
+        }
+        renderUploadQueue();
+
+        while (task.offset < task.size || task.size === 0) {
+          if (task.status !== 'uploading') return;
+
+          const end = Math.min(task.offset + CHUNK_SIZE, task.size);
+          const chunkBlob = task.file.slice(task.offset, end);
+          const chunkStartTs = Date.now();
+
+          task.abortCtrl = new AbortController();
+          const q = new URLSearchParams({
+            item_id: task.itemID,
+            sub_path: task.subPath,
+            rel_path: task.relPath,
+            file_id: task.fileID,
+            offset: String(task.offset),
+            total: String(task.size)
+          });
+
+          const headers = { 'Content-Type': 'application/octet-stream' };
+          const savedToken = localStorage.getItem('pd_auth_token');
+          if (savedToken) headers['X-Auth-Token'] = savedToken;
+
+          const chunkRes = await fetch('/api/files/upload/chunk?' + q.toString(), {
+            method: 'POST',
+            headers,
+            body: chunkBlob,
+            signal: task.abortCtrl.signal
+          });
+          const chunkData = await chunkRes.json();
+          if (!chunkRes.ok || !chunkData.ok) {
+            throw new Error(chunkData.error || 'Chunk upload failed');
+          }
+
+          const elapsedSec = Math.max(0.05, (Date.now() - chunkStartTs) / 1000);
+          const bytesSent = (chunkData.offset || end) - task.offset;
+          task.speed = bytesSent / elapsedSec;
+          task.offset = chunkData.offset || end;
+          renderUploadQueue();
+
+          if (chunkData.completed || task.size === 0) {
+            break;
+          }
+        }
+
+        task.status = 'completed';
+        task.speed = 0;
+        renderUploadQueue();
+        await loadFiles();
+      } catch (err) {
+        if (task.status === 'paused' || task.status === 'cancelled') return;
+        task.status = 'error';
+        task.error = err.message || 'Network interrupted';
+        task.speed = 0;
+        renderUploadQueue();
+      }
+    }
+
+    async function uploadFileList(fileList, customRelPaths = []) {
+      if (!fileList || fileList.length === 0) return;
+
+      const newTasks = [];
+      for (let i = 0; i < fileList.length; i++) {
+        const f = fileList[i];
+        const rel = customRelPaths[i] || f.webkitRelativePath || f.name;
+        const fileID = `${f.name}_${f.size}_${f.lastModified}`;
+        const task = {
+          uid: Math.random().toString(36).slice(2) + Date.now(),
+          file: f,
+          relPath: rel,
+          fileID,
+          size: f.size,
+          offset: 0,
+          speed: 0,
+          status: 'pending',
+          resumed: false,
+          itemID: state.currentItemID,
+          subPath: state.currentSubPath
+        };
+        uploadTasks.unshift(task);
+        newTasks.push(task);
+      }
+
+      renderUploadQueue();
+      const concurrency = 2;
+      let idx = 0;
+      async function worker() {
+        while (idx < newTasks.length) {
+          const current = newTasks[idx++];
+          if (current.status === 'cancelled') continue;
+          await runSingleUploadTask(current);
+        }
+      }
+      const workers = [];
+      for (let w = 0; w < Math.min(concurrency, newTasks.length); w++) {
+        workers.push(worker());
+      }
+      await Promise.all(workers);
+    }
+
+    // Drag & Drop support
+    const dz = document.getElementById('dropzoneSection');
+    ['dragenter', 'dragover'].forEach(ev => {
+      window.addEventListener(ev, e => {
+        e.preventDefault();
+        if (state.canEdit) dz.classList.add('dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach(ev => {
+      window.addEventListener(ev, e => {
+        e.preventDefault();
+        dz.classList.remove('dragover');
+      });
+    });
+
+    window.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      if (!state.canEdit) return;
+      const items = e.dataTransfer.items;
+      if (!items || items.length === 0) return;
+
+      const files = [];
+      const relPaths = [];
+
+      async function traverseEntry(entry, prefix = '') {
+        if (!entry) return;
+        if (entry.isFile) {
+          await new Promise(resolve => {
+            entry.file(file => {
+              files.push(file);
+              relPaths.push(prefix + file.name);
+              resolve();
+            }, () => resolve());
+          });
+        } else if (entry.isDirectory) {
+          const reader = entry.createReader();
+          const entries = await new Promise(resolve => {
+            const all = [];
+            function readBatch() {
+              reader.readEntries(batch => {
+                if (!batch.length) resolve(all);
+                else { all.push(...batch); readBatch(); }
+              }, () => resolve(all));
+            }
+            readBatch();
+          });
+          for (const child of entries) {
+            await traverseEntry(child, prefix + entry.name + '/');
+          }
+        }
+      }
+
+      const entries = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].webkitGetAsEntry) {
+          const entry = items[i].webkitGetAsEntry();
+          if (entry) entries.push(entry);
+        }
+      }
+
+      if (entries.length > 0) {
+        for (const entry of entries) {
+          await traverseEntry(entry, '');
+        }
+        await uploadFileList(files, relPaths);
+      } else if (e.dataTransfer.files.length > 0) {
+        await uploadFileList(e.dataTransfer.files);
+      }
+    });
+
+    async function refreshAll() {
+      const ok = await loadStatus();
+      if (ok) await loadFiles();
+    }
+
+    refreshAll();
+  </script>
+</body>
+</html>

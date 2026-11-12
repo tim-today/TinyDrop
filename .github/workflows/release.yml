@@ -1,0 +1,168 @@
+name: Build and Release TinyDrop
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    name: Build macOS (Intel & Apple Silicon & Universal)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build macOS Binaries & App Bundle
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          mkdir -p dist
+
+          echo "Generating GUI Icons (.icns, .ico, .syso)..."
+          go run scripts/gen_icons.go
+
+          echo "Building macOS amd64..."
+          CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w -X main.Version=${VERSION}" -o dist/TinyDrop_darwin_amd64 .
+
+          echo "Building macOS arm64..."
+          CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w -X main.Version=${VERSION}" -o dist/TinyDrop_darwin_arm64 .
+
+          echo "Creating Universal Binary..."
+          lipo -create -output dist/TinyDrop_darwin_universal dist/TinyDrop_darwin_amd64 dist/TinyDrop_darwin_arm64
+          chmod +x dist/TinyDrop_darwin_*
+
+          # Package macOS .app bundle (Universal with AppIcon.icns)
+          APP_DIR="dist/TinyDrop.app/Contents"
+          mkdir -p "${APP_DIR}/MacOS" "${APP_DIR}/Resources"
+          cp dist/TinyDrop_darwin_universal "${APP_DIR}/MacOS/TinyDrop"
+          cp internal/assets/AppIcon.icns "${APP_DIR}/Resources/AppIcon.icns"
+          cat > "${APP_DIR}/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleExecutable</key>
+            <string>TinyDrop</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.timtoday.tinydrop</string>
+            <key>CFBundleName</key>
+            <string>TinyDrop</string>
+            <key>CFBundleDisplayName</key>
+            <string>TinyDrop (TD)</string>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
+            <key>CFBundleVersion</key>
+            <string>${VERSION}</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${VERSION}</string>
+            <key>LSUIElement</key>
+            <true/>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+
+          cd dist
+          tar -czf "TinyDrop_${VERSION}_darwin_amd64.tar.gz" TinyDrop_darwin_amd64
+          tar -czf "TinyDrop_${VERSION}_darwin_arm64.tar.gz" TinyDrop_darwin_arm64
+          tar -czf "TinyDrop_${VERSION}_darwin_universal.tar.gz" TinyDrop_darwin_universal
+          zip -r -q "TinyDrop_${VERSION}_macOS_App_Universal.zip" TinyDrop.app
+          rm -rf TinyDrop.app TinyDrop_darwin_amd64 TinyDrop_darwin_arm64 TinyDrop_darwin_universal
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-macos
+          path: dist/*
+
+  build-windows-linux:
+    name: Build Windows & Linux (amd64 / arm64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build Windows & Linux Packages
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          mkdir -p dist
+
+          echo "Generating GUI Icons (.ico, .syso)..."
+          go run scripts/gen_icons.go
+
+          echo "Building Windows amd64 (GUI Tray)..."
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w -H windowsgui -X main.Version=${VERSION}" -o dist/TinyDrop.exe .
+          (cd dist && zip -q "TinyDrop_${VERSION}_windows_amd64.zip" TinyDrop.exe && rm -f TinyDrop.exe)
+
+          echo "Building Windows arm64 (GUI Tray)..."
+          CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -ldflags="-s -w -H windowsgui -X main.Version=${VERSION}" -o dist/TinyDrop.exe .
+          (cd dist && zip -q "TinyDrop_${VERSION}_windows_arm64.zip" TinyDrop.exe && rm -f TinyDrop.exe)
+
+          echo "Building Linux amd64..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X main.Version=${VERSION}" -o dist/tinydrop .
+          (cd dist && tar -czf "TinyDrop_${VERSION}_linux_amd64.tar.gz" tinydrop && rm -f tinydrop)
+
+          echo "Building Linux arm64..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w -X main.Version=${VERSION}" -o dist/tinydrop .
+          (cd dist && tar -czf "TinyDrop_${VERSION}_linux_arm64.tar.gz" tinydrop && rm -f tinydrop)
+
+      - name: Upload Windows & Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-win-linux
+          path: dist/*
+
+  create-release:
+    name: Publish GitHub Release
+    needs: [build-macos, build-windows-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate SHA256 Checksums
+        shell: bash
+        run: |
+          cd release-assets
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Publish to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false

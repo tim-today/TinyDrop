@@ -1,0 +1,19 @@
+# Local dev & build artifacts
+/dist/
+/tinydrop
+/pebbledrop
+*.exe
+*.app
+*.syso
+
+# Runtime config & temporary shared folders
+/tinydrop_config.json
+/pebbledrop_config.json
+/tinydrop_shared/
+/pebbledrop_shared/
+.tinydrop_part_*
+.pebbledrop_part_*
+
+# Local modification logs & OS files
+修改记录.md
+.DS_Store

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="tdGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="dropGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0ea5e9" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <!-- Squircle App Icon Background -->
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#tdGrad)" filter="url(#shadow)"/>
+  <rect x="8" y="8" width="112" height="56" rx="28" fill="url(#dropGlow)"/>
+  <!-- Subtle Water Drop Silhouette -->
+  <path d="M64 20 C64 20 98 58 98 81 C98 99.7 82.8 114 64 114 C45.2 114 30 99.7 30 81 C30 58 64 20 64 20 Z" fill="#0f172a" fill-opacity="0.18"/>
+  <!-- Bold TD Monogram -->
+  <g fill="#ffffff">
+    <!-- T -->
+    <path d="M26 42 H62 V52 H49 V88 H38 V52 H26 Z"/>
+    <!-- D -->
+    <path d="M66 42 H83 C96.5 42 105 51.2 105 65 C105 78.8 96.5 88 83 88 H66 Z M77 52 V78 H82.5 C90 78 94 72.8 94 65 C94 57.2 90 52 82.5 52 Z"/>
+  </g>
+</svg>
