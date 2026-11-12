@@ -441,6 +441,23 @@
     .textpad-area:focus {
       border-color: var(--primary);
     }
+    .textpad-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      padding-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .textpad-sync-info {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      word-break: break-all;
+    }
 
     /* Upload Progress Queue */
     .upload-queue {
@@ -873,8 +890,8 @@
 
           <div class="config-row">
             <div class="config-label">
-              Allow Client Upload & Delete
-              <span>Default off (Read-Only); enable to grant full management to clients</span>
+              Allow Client Upload, Delete & Textbox Edit
+              <span>Default off (Read-Only); enable so clients can upload/delete files & live-edit Shared Textbox</span>
             </div>
             <label class="switch">
               <input type="checkbox" id="cfgAllowEdit" onchange="saveConfig({allow_client_edit: this.checked})">
@@ -957,16 +974,23 @@
       <div class="textpad-header">
         <div class="textpad-title">
           <span>📋 Shared Textbox</span>
+          <span class="badge badge-client" id="liveSyncBadge" style="font-size:10px;padding:1px 7px;">● Live Sync</span>
           <span id="textpadCharCount" class="textpad-meta">0 chars</span>
         </div>
         <div class="textpad-actions">
-          <button class="btn btn-sm btn-primary" onclick="copySharedText()">📋 Copy Text</button>
-          <button id="btnPasteText" class="btn btn-sm" style="display:none;" onclick="pasteAndSyncText()">📥 Paste & Sync</button>
-          <button id="btnSaveText" class="btn btn-sm" style="display:none;" onclick="saveSharedText()">💾 Save / Sync</button>
+          <button class="btn btn-sm btn-primary" onclick="selectAndCopySharedText()">📋 Select All & Copy</button>
+          <button id="btnPasteText" class="btn btn-sm" style="display:none;" onclick="pasteAndSyncText()">📥 Paste</button>
           <button id="btnClearText" class="btn btn-sm btn-danger" style="display:none;" onclick="clearSharedText()">🗑️ Clear</button>
         </div>
       </div>
-      <textarea id="sharedTextInput" class="textpad-area" placeholder="Paste or type long text, links, snippets, or commands here to share across PC and mobile devices..." oninput="onSharedTextInput()"></textarea>
+      <textarea id="sharedTextInput" class="textpad-area" placeholder="Type or paste long text, links, snippets, or commands here — syncs in real time across PC & mobile without refreshing..." oninput="onSharedTextInput()"></textarea>
+      <div class="textpad-foot">
+        <div class="textpad-sync-info" id="textpadSyncInfo">
+          <span>🕒</span>
+          <span id="textpadSyncMeta">No sync records yet</span>
+        </div>
+        <div id="textpadLiveStatus" style="font-size:10.5px;color:rgba(148,163,184,0.7);">Auto syncs on edit</div>
+      </div>
     </section>
 
     <!-- Resumable Upload Progress Queue -->
@@ -1094,7 +1118,11 @@
       selected: new Set(),
       addresses: [],
       activeAddrIdx: 0,
-      activeDetailItem: null
+      activeDetailItem: null,
+      lastSyncedText: '',
+      textUpdatedAt: 0,
+      textSource: '',
+      textIsLocalEdit: false
     };
 
     function toggleAdminSection() {
@@ -1205,14 +1233,24 @@
 
       // Shared Textbox state & permissions
       const txtEl = document.getElementById('sharedTextInput');
-      if (document.activeElement !== txtEl) {
-        txtEl.value = data.shared_text || '';
+      const incomingText = data.shared_text || '';
+      if (document.activeElement !== txtEl || !state.canEdit) {
+        txtEl.value = incomingText;
+        state.lastSyncedText = incomingText;
         updateTextCharCount();
+      }
+      if (data.shared_text_updated_at) {
+        state.textUpdatedAt = data.shared_text_updated_at;
+        state.textSource = data.shared_text_source || 'PC';
+        updateTextSyncMeta();
       }
       txtEl.readOnly = !state.canEdit;
       document.getElementById('btnPasteText').style.display = state.canEdit ? 'inline-flex' : 'none';
-      document.getElementById('btnSaveText').style.display = state.canEdit ? 'inline-flex' : 'none';
       document.getElementById('btnClearText').style.display = state.canEdit ? 'inline-flex' : 'none';
+
+      if (state.isAdmin || state.isAuthed) {
+        ensureLiveTextStream();
+      }
 
       if (state.isAdmin) {
         document.getElementById('cfgShareEnabled').checked = !!data.share_enabled;
@@ -1269,6 +1307,84 @@
       showToast('✅ Copied URL: ' + input.value);
     }
 
+    const CLIENT_SENDER_ID = Math.random().toString(36).slice(2) + '_' + Date.now();
+    let __textEventSource = null;
+
+    function formatTimeAgo(ms) {
+      if (!ms || ms <= 0) return '';
+      const diffSec = Math.floor((Date.now() - ms) / 1000);
+      if (diffSec < 5) return 'just now';
+      if (diffSec < 60) return `${diffSec}s ago`;
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m ago`;
+      const diffHours = Math.floor(diffMin / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      const diffDays = Math.floor(diffHours / 24);
+      return `${diffDays}d ago`;
+    }
+
+    function updateTextSyncMeta() {
+      const metaEl = document.getElementById('textpadSyncMeta');
+      if (!metaEl) return;
+      if (!state.textUpdatedAt || state.textUpdatedAt <= 0) {
+        metaEl.textContent = 'No sync records yet';
+        return;
+      }
+      const ago = formatTimeAgo(state.textUpdatedAt);
+      if (state.textIsLocalEdit) {
+        metaEl.textContent = `Updated locally ${ago}`;
+      } else {
+        const src = state.textSource ? (state.textSource.toUpperCase() === 'PC' ? 'PC' : 'Client') : 'remote';
+        metaEl.textContent = `Synced from ${src} ${ago}`;
+      }
+    }
+
+    // Refresh timestamp string every 10 seconds
+    setInterval(updateTextSyncMeta, 10000);
+
+    function ensureLiveTextStream() {
+      if (__textEventSource && __textEventSource.readyState !== 2) return;
+      const token = localStorage.getItem('pd_auth_token') || '';
+      const streamUrl = '/api/text/stream' + (token ? ('?token=' + encodeURIComponent(token)) : '');
+      try {
+        __textEventSource = new EventSource(streamUrl);
+        __textEventSource.onmessage = (ev) => {
+          try {
+            const payload = JSON.parse(ev.data);
+            if (payload.sender_id && payload.sender_id === CLIENT_SENDER_ID) return;
+            const newText = payload.text || '';
+            const txtEl = document.getElementById('sharedTextInput');
+            if (payload.updated_at) {
+              state.textUpdatedAt = payload.updated_at;
+              state.textSource = payload.source || 'PC';
+              state.textIsLocalEdit = false;
+              updateTextSyncMeta();
+            }
+            if (txtEl && txtEl.value !== newText) {
+              txtEl.value = newText;
+              state.lastSyncedText = newText;
+              updateTextCharCount();
+              const badge = document.getElementById('liveSyncBadge');
+              if (badge) {
+                badge.textContent = '⚡ Synced';
+                clearTimeout(window.__syncBadgeTimer);
+                window.__syncBadgeTimer = setTimeout(() => { badge.textContent = '● Live Sync'; }, 1200);
+              }
+            }
+          } catch (_) {}
+        };
+        __textEventSource.onerror = () => {
+          if (__textEventSource) {
+            __textEventSource.close();
+            __textEventSource = null;
+          }
+          setTimeout(() => {
+            if (state.isAdmin || state.isAuthed) ensureLiveTextStream();
+          }, 2500);
+        };
+      } catch (_) {}
+    }
+
     function updateTextCharCount() {
       const val = document.getElementById('sharedTextInput').value || '';
       document.getElementById('textpadCharCount').textContent = `${val.length} chars`;
@@ -1280,41 +1396,61 @@
       clearTimeout(window.__textSyncTimer);
       window.__textSyncTimer = setTimeout(() => {
         saveSharedText(true);
-      }, 600);
+      }, 150);
     }
 
     async function saveSharedText(silent = false) {
       if (!state.canEdit) return;
       const text = document.getElementById('sharedTextInput').value;
-      const res = await fetch('/api/text', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ text })
-      });
-      if (res.ok && !silent) {
-        showToast('✅ Shared text synced');
+      // Do not initiate network request if content has not changed
+      if (text === state.lastSyncedText) {
+        return;
       }
+      const badge = document.getElementById('liveSyncBadge');
+      try {
+        const res = await fetch('/api/text', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ text, sender_id: CLIENT_SENDER_ID })
+        });
+        if (res.ok) {
+          const respData = await res.json();
+          state.lastSyncedText = text;
+          state.textUpdatedAt = respData.updated_at || Date.now();
+          state.textSource = respData.source || (state.isAdmin ? 'PC' : 'Client');
+          state.textIsLocalEdit = true;
+          updateTextSyncMeta();
+
+          if (badge) {
+            badge.textContent = '⚡ Live Saved';
+            clearTimeout(window.__syncBadgeTimer);
+            window.__syncBadgeTimer = setTimeout(() => { badge.textContent = '● Live Sync'; }, 1200);
+          }
+          if (!silent) showToast('✅ Shared text synced');
+        }
+      } catch (_) {}
     }
 
-    function copySharedText() {
+    function selectAndCopySharedText() {
       const el = document.getElementById('sharedTextInput');
       const val = el.value;
       if (!val) {
         showToast('⚠️ Textbox is empty');
         return;
       }
+      el.focus();
+      el.select();
+      el.setSelectionRange(0, val.length);
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(val).then(() => {
-          showToast('✅ Copied shared text to clipboard');
+          showToast('✅ Selected all & copied to clipboard');
         }).catch(() => {
-          el.select();
           document.execCommand('copy');
-          showToast('✅ Copied shared text to clipboard');
+          showToast('✅ Selected all & copied to clipboard');
         });
       } else {
-        el.select();
         document.execCommand('copy');
-        showToast('✅ Copied shared text to clipboard');
+        showToast('✅ Selected all & copied to clipboard');
       }
     }
 

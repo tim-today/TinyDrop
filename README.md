@@ -20,11 +20,12 @@
 
 - **🖥️ Native System Tray GUI (macOS & Windows)**
   Lives quietly in your macOS menu bar or Windows system tray with a custom **TD** icon. Quickly open the dashboard, reveal the temporary share directory in Finder/Explorer, add files/folders via native OS dialogs, toggle sharing, or reset the access PIN.
-- **📋 Shared Textbox & Instant Cross-Device Clipboard**
-  Built-in real-time synchronized text pad right on the main dashboard:
-  - **Long Text & Snippet Sharing**: Effortlessly share long paragraphs, URLs, shell commands, or code snippets between your PC and mobile browser without third-party chat apps.
-  - **One-Click Actions & Auto-Sync**: Features live character count, auto-debounced background saving, **Copy Text**, **Paste & Sync**, and **Clear**.
-  - **Permission Aware**: Read-only clients can copy shared text with one tap, while read-write clients and the PC host can edit and sync bidirectionally.
+- **📋 Real-Time Shared Textbox & Cross-Device Clipboard**
+  Built-in live synchronized text pad right on the main dashboard:
+  - **Zero-Click Live Synchronization**: Powered by Server-Sent Events (SSE). Typing on PC immediately updates mobile screens in real time without refreshing or clicking save. When external client editing permission is enabled, edits on mobile instantly stream back to PC.
+  - **Smart Change Detection & Timestamp**: Only broadcasts when text actually changes. A subtle status line below the textbox shows relative update timestamps and origins (e.g. `Updated locally just now`, `Synced from PC 3m ago`, `Synced from Client 1m ago`).
+  - **Quick Select All & Copy**: Features live character count, **Select All & Copy** for fast clipboard capture, **Paste**, and **Clear**.
+  - **Permission Aware**: Read-only clients can view and copy shared text with one tap, while read-write clients and the PC host can edit and live-stream bidirectionally.
 - **🌐 Auto LAN & Tailscale Discovery + QR Instant Connect**
   Automatically detects local private LAN IPs (`192.168.x.x` / `10.x.x.x`) and **Tailscale virtual IPs (`100.64.0.0/10`)**. Switch network interfaces with one click to generate an offline SVG QR code for instant mobile browser access.
 - **🔐 6-Digit PIN Auth & Persistent Client Sessions**

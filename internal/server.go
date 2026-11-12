@@ -33,13 +33,19 @@ type ServerManager struct {
 	runningPort int
 	lastError   string
 	stopChan    chan struct{}
+
+	sseMu      sync.Mutex
+	sseClients map[chan string]struct{}
+	textSeq    int64
 }
 
 func NewServerManager(cm *ConfigManager) *ServerManager {
 	return &ServerManager{
 		CM:         cm,
-		AppVersion: "v1.0.3",
+		AppVersion: "v1.0.4",
 		stopChan:   make(chan struct{}),
+		sseClients: make(map[chan string]struct{}),
+		textSeq:    time.Now().UnixMilli(),
 	}
 }
 
@@ -106,6 +112,7 @@ func (sm *ServerManager) startServerInstance() {
 	mux.HandleFunc("/api/auth/login", sm.handleLogin)
 	mux.HandleFunc("/api/status", sm.handleStatus)
 	mux.HandleFunc("/api/text", sm.handleSharedText)
+	mux.HandleFunc("/api/text/stream", sm.handleTextStream)
 	mux.HandleFunc("/api/files", sm.handleFiles)
 	mux.HandleFunc("/api/files/delete", sm.handleDeleteFiles)
 	mux.HandleFunc("/api/files/upload", sm.handleUpload)
@@ -264,9 +271,13 @@ func (sm *ServerManager) handleStatus(w http.ResponseWriter, r *http.Request) {
 		resp["share_mode"] = cfg.ShareMode
 		resp["temp_dir"] = cfg.TempDir
 		resp["shared_text"] = cfg.SharedText
+		resp["shared_text_updated_at"] = cfg.SharedTextUpdatedAt
+		resp["shared_text_source"] = cfg.SharedTextSource
 		resp["addresses"] = GetNetworkAddresses(cfg.Port)
 	} else if authed {
 		resp["shared_text"] = cfg.SharedText
+		resp["shared_text_updated_at"] = cfg.SharedTextUpdatedAt
+		resp["shared_text_source"] = cfg.SharedTextSource
 		resp["addresses"] = GetNetworkAddresses(cfg.Port)
 	}
 
@@ -288,9 +299,15 @@ func (sm *ServerManager) handleSharedText(w http.ResponseWriter, r *http.Request
 	}
 
 	if r.Method == http.MethodGet {
+		sm.sseMu.Lock()
+		seq := sm.textSeq
+		sm.sseMu.Unlock()
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"ok":   true,
-			"text": cfg.SharedText,
+			"ok":         true,
+			"text":       cfg.SharedText,
+			"updated_at": cfg.SharedTextUpdatedAt,
+			"source":     cfg.SharedTextSource,
+			"seq":        seq,
 		})
 		return
 	}
@@ -301,23 +318,132 @@ func (sm *ServerManager) handleSharedText(w http.ResponseWriter, r *http.Request
 			return
 		}
 		var req struct {
-			Text string `json:"text"`
+			Text     string `json:"text"`
+			SenderID string `json:"sender_id"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON payload"})
 			return
 		}
+		// Skip update and broadcast if content has not changed
+		if req.Text == cfg.SharedText {
+			sm.sseMu.Lock()
+			seq := sm.textSeq
+			sm.sseMu.Unlock()
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"ok":         true,
+				"unchanged":  true,
+				"text":       cfg.SharedText,
+				"updated_at": cfg.SharedTextUpdatedAt,
+				"source":     cfg.SharedTextSource,
+				"seq":        seq,
+			})
+			return
+		}
+		nowMs := time.Now().UnixMilli()
+		source := "Client"
+		if admin {
+			source = "PC"
+		}
 		_ = sm.CM.Update(func(c *Config) {
 			c.SharedText = req.Text
+			c.SharedTextUpdatedAt = nowMs
+			c.SharedTextSource = source
 		})
+		seq := sm.broadcastTextUpdate(req.Text, req.SenderID, source, nowMs)
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"ok":   true,
-			"text": req.Text,
+			"ok":         true,
+			"text":       req.Text,
+			"updated_at": nowMs,
+			"source":     source,
+			"seq":        seq,
 		})
 		return
 	}
 
 	writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+}
+
+func (sm *ServerManager) broadcastTextUpdate(text, senderID, source string, updatedAt int64) int64 {
+	sm.sseMu.Lock()
+	sm.textSeq = updatedAt
+	seq := sm.textSeq
+	payloadBytes, _ := json.Marshal(map[string]interface{}{
+		"text":       text,
+		"sender_id":  senderID,
+		"source":     source,
+		"updated_at": updatedAt,
+		"seq":        seq,
+	})
+	msg := string(payloadBytes)
+	for ch := range sm.sseClients {
+		select {
+		case ch <- msg:
+		default:
+		}
+	}
+	sm.sseMu.Unlock()
+	return seq
+}
+
+func (sm *ServerManager) handleTextStream(w http.ResponseWriter, r *http.Request) {
+	cfg := sm.CM.GetSnapshot()
+	if !sm.isAdmin(r, cfg) {
+		if !cfg.ShareEnabled || !sm.isClientAuthed(r, cfg) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	ch := make(chan string, 16)
+	sm.sseMu.Lock()
+	sm.sseClients[ch] = struct{}{}
+	currSeq := sm.textSeq
+	sm.sseMu.Unlock()
+
+	defer func() {
+		sm.sseMu.Lock()
+		delete(sm.sseClients, ch)
+		sm.sseMu.Unlock()
+	}()
+
+	// Send initial snapshot immediately upon connection
+	initBytes, _ := json.Marshal(map[string]interface{}{
+		"text":       cfg.SharedText,
+		"sender_id":  "init",
+		"source":     cfg.SharedTextSource,
+		"updated_at": cfg.SharedTextUpdatedAt,
+		"seq":        currSeq,
+	})
+	_, _ = fmt.Fprintf(w, "data: %s\n\n", string(initBytes))
+	flusher.Flush()
+
+	heartbeat := time.NewTicker(20 * time.Second)
+	defer heartbeat.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case msg := <-ch:
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", msg)
+			flusher.Flush()
+		case <-heartbeat.C:
+			_, _ = fmt.Fprintf(w, ": ping\n\n")
+			flusher.Flush()
+		}
+	}
 }
 
 func (sm *ServerManager) resolveRootOrSub(cfg Config, itemID, subPath string) (string, *ShareItem, error) {
