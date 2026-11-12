@@ -38,7 +38,7 @@ type ServerManager struct {
 func NewServerManager(cm *ConfigManager) *ServerManager {
 	return &ServerManager{
 		CM:         cm,
-		AppVersion: "v1.0.1",
+		AppVersion: "v1.0.2",
 		stopChan:   make(chan struct{}),
 	}
 }

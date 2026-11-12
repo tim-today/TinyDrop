@@ -3,8 +3,8 @@
 package internal
 
 /*
-#cgo CFLAGS: -x objective-c
-#cgo LDFLAGS: -framework Cocoa
+#cgo CFLAGS: -x objective-c -mmacosx-version-min=11.0
+#cgo LDFLAGS: -framework Cocoa -mmacosx-version-min=11.0
 
 void runMacTray(const void *iconBytes, int iconLen);
 void stopMacTray(void);

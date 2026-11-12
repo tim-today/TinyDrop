@@ -43,19 +43,19 @@ type ConfigManager struct {
 }
 
 func NewConfigManager() (*ConfigManager, error) {
-	exePath, err := os.Executable()
 	baseDir := "."
-	if err == nil {
-		baseDir = filepath.Dir(exePath)
-	}
-	// If running via go run, fallback to current working directory
-	cwd, err := os.Getwd()
-	if err == nil {
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		baseDir = filepath.Join(home, ".tinydrop")
+		_ = os.MkdirAll(baseDir, 0755)
+	} else if cwd, err := os.Getwd(); err == nil && cwd != "/" {
 		baseDir = cwd
 	}
 
 	cfgPath := filepath.Join(baseDir, "tinydrop_config.json")
 	defaultTemp := filepath.Join(baseDir, "tinydrop_shared")
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		defaultTemp = filepath.Join(home, "TinyDrop_Shared")
+	}
 	_ = os.MkdirAll(defaultTemp, 0755)
 
 	cm := &ConfigManager{

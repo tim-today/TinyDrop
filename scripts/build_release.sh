@@ -33,6 +33,11 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w -X main
 
 # 3. macOS (amd64, arm64, Universal Binary & TinyDrop.app)
 if [[ "$(uname -s)" == "Darwin" ]]; then
+  CLEAN_VER="${VERSION#v}"
+  export MACOSX_DEPLOYMENT_TARGET=11.0
+  export CGO_CFLAGS="-mmacosx-version-min=11.0"
+  export CGO_LDFLAGS="-mmacosx-version-min=11.0"
+
   echo "-> Building macOS amd64 (Intel)..."
   CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w -X main.Version=${VERSION}" -o "${OUT_DIR}/TinyDrop_darwin_amd64" .
 
@@ -62,12 +67,16 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   <string>TinyDrop</string>
   <key>CFBundleDisplayName</key>
   <string>TinyDrop (TD)</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
   <key>CFBundleIconFile</key>
   <string>AppIcon</string>
   <key>CFBundleVersion</key>
-  <string>${VERSION}</string>
+  <string>${CLEAN_VER}</string>
   <key>CFBundleShortVersionString</key>
-  <string>${VERSION}</string>
+  <string>${CLEAN_VER}</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>11.0</string>
   <key>LSUIElement</key>
   <true/>
   <key>NSHighResolutionCapable</key>
@@ -75,6 +84,7 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
 </dict>
 </plist>
 EOF
+  codesign --force --deep --sign - "${OUT_DIR}/TinyDrop.app"
 
   (
     cd "${OUT_DIR}"

@@ -34,6 +34,10 @@ jobs:
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             VERSION="${{ github.event.inputs.version }}"
           fi
+          CLEAN_VER="${VERSION#v}"
+          export MACOSX_DEPLOYMENT_TARGET=11.0
+          export CGO_CFLAGS="-mmacosx-version-min=11.0"
+          export CGO_LDFLAGS="-mmacosx-version-min=11.0"
           mkdir -p dist
 
           echo "Generating GUI Icons (.icns, .ico, .syso)..."
@@ -54,32 +58,37 @@ jobs:
           mkdir -p "${APP_DIR}/MacOS" "${APP_DIR}/Resources"
           cp dist/TinyDrop_darwin_universal "${APP_DIR}/MacOS/TinyDrop"
           cp internal/assets/AppIcon.icns "${APP_DIR}/Resources/AppIcon.icns"
-          cat > "${APP_DIR}/Info.plist" <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleExecutable</key>
-            <string>TinyDrop</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.timtoday.tinydrop</string>
-            <key>CFBundleName</key>
-            <string>TinyDrop</string>
-            <key>CFBundleDisplayName</key>
-            <string>TinyDrop (TD)</string>
-            <key>CFBundleIconFile</key>
-            <string>AppIcon</string>
-            <key>CFBundleVersion</key>
-            <string>${VERSION}</string>
-            <key>CFBundleShortVersionString</key>
-            <string>${VERSION}</string>
-            <key>LSUIElement</key>
-            <true/>
-            <key>NSHighResolutionCapable</key>
-            <true/>
-          </dict>
-          </plist>
-          EOF
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="UTF-8"?>' \
+            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+            '<plist version="1.0">' \
+            '<dict>' \
+            '  <key>CFBundleExecutable</key>' \
+            '  <string>TinyDrop</string>' \
+            '  <key>CFBundleIdentifier</key>' \
+            '  <string>com.timtoday.tinydrop</string>' \
+            '  <key>CFBundleName</key>' \
+            '  <string>TinyDrop</string>' \
+            '  <key>CFBundleDisplayName</key>' \
+            '  <string>TinyDrop (TD)</string>' \
+            '  <key>CFBundlePackageType</key>' \
+            '  <string>APPL</string>' \
+            '  <key>CFBundleIconFile</key>' \
+            '  <string>AppIcon</string>' \
+            "  <key>CFBundleVersion</key>" \
+            "  <string>${CLEAN_VER}</string>" \
+            "  <key>CFBundleShortVersionString</key>" \
+            "  <string>${CLEAN_VER}</string>" \
+            '  <key>LSMinimumSystemVersion</key>' \
+            '  <string>11.0</string>' \
+            '  <key>LSUIElement</key>' \
+            '  <true/>' \
+            '  <key>NSHighResolutionCapable</key>' \
+            '  <true/>' \
+            '</dict>' \
+            '</plist>' > "${APP_DIR}/Info.plist"
+          plutil -lint "${APP_DIR}/Info.plist"
+          codesign --force --deep --sign - dist/TinyDrop.app
 
           cd dist
           tar -czf "TinyDrop_${VERSION}_darwin_amd64.tar.gz" TinyDrop_darwin_amd64
