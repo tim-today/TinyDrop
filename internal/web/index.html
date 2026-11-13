@@ -842,7 +842,7 @@
             <span id="roleBadge" class="badge badge-client">Loading</span>
             <a id="updateBadge" class="badge badge-update" href="https://github.com/tim-today/TinyDrop/releases/latest" target="_blank" rel="noopener" style="display:none;" title="New release available on GitHub!">🔥 Update Available</a>
           </h1>
-          <div class="brand-sub">Instant LAN & Tailscale File Hub · Resumable Stream</div>
+          <div class="brand-sub" id="brandSub">Loading shared host...</div>
         </div>
       </div>
       <div class="header-actions">
@@ -865,6 +865,17 @@
           <span style="font-size:11px;color:var(--muted);font-weight:normal;">Applied Instantly</span>
         </div>
         <div class="config-rows">
+          <div class="config-row">
+            <div class="config-label">
+              Device Name (Subtitle)
+              <span>Displayed in header as "&lt;Device Name&gt; shared" to identify this host on LAN</span>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="text" id="cfgDeviceName" class="input" style="width:160px;font-weight:600;" placeholder="Computer Name">
+              <button class="btn btn-sm" onclick="saveDeviceName()">Save</button>
+            </div>
+          </div>
+
           <div class="config-row">
             <div class="config-label">
               Enable File Sharing
@@ -1204,6 +1215,12 @@
       state.canEdit = !!data.can_edit;
       state.shareEnabled = !!data.share_enabled;
       state.version = data.version || 'v1.0.0';
+      state.deviceName = data.device_name || '';
+
+      const brandSubEl = document.getElementById('brandSub');
+      if (brandSubEl) {
+        brandSubEl.textContent = (state.deviceName ? state.deviceName : 'Host') + ' shared';
+      }
 
       document.getElementById('versionBadge').textContent = state.version;
       document.getElementById('footerVersion').textContent = state.version;
@@ -1253,6 +1270,7 @@
       }
 
       if (state.isAdmin) {
+        document.getElementById('cfgDeviceName').value = state.deviceName || '';
         document.getElementById('cfgShareEnabled').checked = !!data.share_enabled;
         document.getElementById('cfgPassword').value = data.password || '';
         document.getElementById('qrPwdDisplay').textContent = data.password || '------';
@@ -1844,6 +1862,15 @@
       }
       showToast('✅ Settings updated');
       await refreshAll();
+    }
+
+    function saveDeviceName() {
+      const name = document.getElementById('cfgDeviceName').value.trim();
+      if (!name) {
+        showToast('⚠️ Device name cannot be empty');
+        return;
+      }
+      saveConfig({ device_name: name });
     }
 
     function savePassword() {

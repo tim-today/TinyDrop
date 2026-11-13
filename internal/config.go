@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -23,14 +24,15 @@ type ShareItem struct {
 }
 
 type Config struct {
-	Port            int         `json:"port"`
-	ShareEnabled    bool        `json:"share_enabled"`
-	Password        string      `json:"password"`
-	PasswordVersion string      `json:"password_version"`
-	AllowClientEdit bool        `json:"allow_client_edit"`
-	ShareMode       string      `json:"share_mode"` // "map" or "copy"
-	TempDir         string      `json:"temp_dir"`
-	AutoKeepAlive   bool        `json:"auto_keep_alive"`
+	DeviceName          string      `json:"device_name"`
+	Port                int         `json:"port"`
+	ShareEnabled        bool        `json:"share_enabled"`
+	Password            string      `json:"password"`
+	PasswordVersion     string      `json:"password_version"`
+	AllowClientEdit     bool        `json:"allow_client_edit"`
+	ShareMode           string      `json:"share_mode"` // "map" or "copy"
+	TempDir             string      `json:"temp_dir"`
+	AutoKeepAlive       bool        `json:"auto_keep_alive"`
 	AdminSecret         string      `json:"admin_secret"`
 	SharedText          string      `json:"shared_text"`
 	SharedTextUpdatedAt int64       `json:"shared_text_updated_at"`
@@ -60,9 +62,12 @@ func NewConfigManager() (*ConfigManager, error) {
 	}
 	_ = os.MkdirAll(defaultTemp, 0755)
 
+	defaultDeviceName := GetDefaultDeviceName()
+
 	cm := &ConfigManager{
 		ConfigPath: cfgPath,
 		Config: Config{
+			DeviceName:      defaultDeviceName,
 			Port:            20999,
 			ShareEnabled:    true,
 			Password:        Generate6DigitPassword(),
@@ -83,6 +88,9 @@ func NewConfigManager() (*ConfigManager, error) {
 		}
 	}
 
+	if strings.TrimSpace(cm.Config.DeviceName) == "" {
+		cm.Config.DeviceName = defaultDeviceName
+	}
 	if cm.Config.Port <= 0 || cm.Config.Port > 65535 {
 		cm.Config.Port = 20999
 	}
@@ -151,4 +159,15 @@ func GenerateRandomHex(bytesLen int) string {
 	b := make([]byte, bytesLen)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+func GetDefaultDeviceName() string {
+	if h, err := os.Hostname(); err == nil {
+		h = strings.TrimSpace(h)
+		h = strings.TrimSuffix(h, ".local")
+		if h != "" {
+			return h
+		}
+	}
+	return GenerateRandomHex(4) // 8-character hex
 }

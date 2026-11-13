@@ -42,7 +42,7 @@ type ServerManager struct {
 func NewServerManager(cm *ConfigManager) *ServerManager {
 	return &ServerManager{
 		CM:         cm,
-		AppVersion: "v1.0.4",
+		AppVersion: "v1.0.5",
 		stopChan:   make(chan struct{}),
 		sseClients: make(map[chan string]struct{}),
 		textSeq:    time.Now().UnixMilli(),
@@ -256,6 +256,7 @@ func (sm *ServerManager) handleStatus(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]interface{}{
 		"app_name":          "TinyDrop",
 		"version":           sm.AppVersion,
+		"device_name":       cfg.DeviceName,
 		"github_url":        "https://github.com/tim-today/TinyDrop",
 		"is_admin":          admin,
 		"is_authed":         authed,
@@ -1005,6 +1006,7 @@ func (sm *ServerManager) handlePCConfig(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
+		DeviceName      *string `json:"device_name"`
 		Port            *int    `json:"port"`
 		ShareEnabled    *bool   `json:"share_enabled"`
 		Password        *string `json:"password"`
@@ -1023,6 +1025,12 @@ func (sm *ServerManager) handlePCConfig(w http.ResponseWriter, r *http.Request) 
 	newPort := cfg.Port
 
 	_ = sm.CM.Update(func(c *Config) {
+		if req.DeviceName != nil {
+			name := strings.TrimSpace(*req.DeviceName)
+			if name != "" {
+				c.DeviceName = name
+			}
+		}
 		if req.Port != nil && *req.Port > 0 && *req.Port <= 65535 && *req.Port != c.Port {
 			c.Port = *req.Port
 			newPort = *req.Port

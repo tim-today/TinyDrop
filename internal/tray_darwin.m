@@ -19,15 +19,17 @@ static int globalTrayIconLen = 0;
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
-    self.statusItem.button.title = @" TD";
+    self.statusItem.button.title = @"";
     if (globalTrayIconLen > 0 && globalTrayIconBytes != NULL) {
         NSData *pngData = [NSData dataWithBytes:globalTrayIconBytes length:globalTrayIconLen];
         NSImage *img = [[NSImage alloc] initWithData:pngData];
         if (img != nil) {
             [img setSize:NSMakeSize(18, 18)];
             self.statusItem.button.image = img;
-            self.statusItem.button.imagePosition = NSImageLeft;
+            self.statusItem.button.imagePosition = NSImageOnly;
         }
+    } else {
+        self.statusItem.button.title = @"TD";
     }
 
     NSMenu *menu = [[NSMenu alloc] initWithTitle:@"TinyDrop"];
