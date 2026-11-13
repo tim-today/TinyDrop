@@ -889,11 +889,11 @@
 
           <div class="config-row">
             <div class="config-label">
-              6-Digit Access PIN
+              6-Character Access PIN
               <span>Clients authenticate once and stay signed in until PIN changes</span>
             </div>
             <div style="display:flex;gap:6px;align-items:center;">
-              <input type="text" id="cfgPassword" class="input" maxlength="6" style="width:88px;text-align:center;font-weight:700;letter-spacing:2px;color:#a5b4fc;">
+              <input type="text" id="cfgPassword" class="input" maxlength="6" style="width:108px;text-align:center;font-weight:700;letter-spacing:3px;color:#a5b4fc;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">
               <button class="btn btn-sm" onclick="savePassword()">Save</button>
               <button class="btn btn-sm" onclick="saveConfig({random_password: true})">🎲 Random</button>
             </div>
@@ -1104,8 +1104,8 @@
     <div class="modal-card" style="text-align:center;">
       <div class="logo-icon" style="margin: 0 auto 12px;"><img src="/logo.svg" alt="TD"></div>
       <h2 style="font-size:18px;margin-bottom:6px;">Enter Access PIN</h2>
-      <p style="font-size:12px;color:var(--muted);">Enter the 6-digit PIN code shown on the host. Your session stays active until the host changes the PIN.</p>
-      <input type="tel" id="loginPinInput" class="pin-input" maxlength="6" placeholder="••••••" onkeyup="if(event.key==='Enter') submitLogin()">
+      <p style="font-size:12px;color:var(--muted);">Enter the 6-character alphanumeric PIN code shown on the host. Your session stays active until the host changes the PIN.</p>
+      <input type="text" id="loginPinInput" class="pin-input" maxlength="6" placeholder="••••••" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeyup="if(event.key==='Enter') submitLogin()">
       <div id="loginError" style="color:var(--danger);font-size:12px;margin-bottom:10px;min-height:18px;"></div>
       <button class="btn btn-primary" style="width:100%;padding:11px;" onclick="submitLogin()">🔓 Unlock TinyDrop</button>
     </div>
@@ -1891,7 +1891,7 @@
     function savePassword() {
       const pwd = document.getElementById('cfgPassword').value.trim();
       if (pwd.length !== 6) {
-        showToast('⚠️ PIN code must be 6 digits');
+        showToast('⚠️ PIN code must be exactly 6 characters');
         return;
       }
       saveConfig({ password: pwd });

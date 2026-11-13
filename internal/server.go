@@ -42,7 +42,7 @@ type ServerManager struct {
 func NewServerManager(cm *ConfigManager) *ServerManager {
 	return &ServerManager{
 		CM:         cm,
-		AppVersion: "v1.0.6",
+		AppVersion: "v1.0.7",
 		stopChan:   make(chan struct{}),
 		sseClients: make(map[chan string]struct{}),
 		textSeq:    time.Now().UnixMilli(),
@@ -231,7 +231,7 @@ func (sm *ServerManager) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.TrimSpace(req.Password) != cfg.Password {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid 6-digit PIN code, please try again"})
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid 6-character PIN code, please try again"})
 		return
 	}
 	token := sm.makeClientToken(cfg)

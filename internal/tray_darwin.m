@@ -68,7 +68,7 @@ static int globalTrayIconLen = 0;
     self.toggleEditItem.target = self;
     [menu addItem:self.toggleEditItem];
 
-    self.pwdMenuItem = [[NSMenuItem alloc] initWithTitle:@"🔑 Regenerate 6-Digit PIN Code" action:@selector(onMenuClick:) keyEquivalent:@""];
+    self.pwdMenuItem = [[NSMenuItem alloc] initWithTitle:@"🔑 Regenerate 6-Char PIN Code" action:@selector(onMenuClick:) keyEquivalent:@""];
     self.pwdMenuItem.tag = 7;
     self.pwdMenuItem.target = self;
     [menu addItem:self.pwdMenuItem];

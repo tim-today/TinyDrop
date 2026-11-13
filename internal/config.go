@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -147,12 +146,19 @@ func (cm *ConfigManager) GetSnapshot() Config {
 	return cp
 }
 
+const alphanumericCharset = "23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+
 func Generate6DigitPassword() string {
-	n, err := rand.Int(rand.Reader, big.NewInt(900000))
-	if err != nil {
-		return "123456"
+	b := make([]byte, 6)
+	charsetLen := big.NewInt(int64(len(alphanumericCharset)))
+	for i := 0; i < 6; i++ {
+		idx, err := rand.Int(rand.Reader, charsetLen)
+		if err != nil {
+			return "234567"
+		}
+		b[i] = alphanumericCharset[idx.Int64()]
 	}
-	return fmt.Sprintf("%06d", n.Int64()+100000)
+	return string(b)
 }
 
 func GenerateRandomHex(bytesLen int) string {
