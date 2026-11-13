@@ -1201,7 +1201,7 @@
     }
 
     function getAuthHeaders() {
-      const headers = { 'Content-Type': 'application/json' };
+      const headers = { 'Content-Type': 'application/json', 'X-Sender-ID': CLIENT_SENDER_ID };
       const savedToken = localStorage.getItem('pd_auth_token');
       if (savedToken) headers['X-Auth-Token'] = savedToken;
       return headers;
@@ -1360,6 +1360,14 @@
     // Refresh timestamp string every 10 seconds
     setInterval(updateTextSyncMeta, 10000);
 
+    let __filesAutoRefreshTimer = null;
+    function scheduleAutoFilesRefresh() {
+      clearTimeout(__filesAutoRefreshTimer);
+      __filesAutoRefreshTimer = setTimeout(() => {
+        loadFiles();
+      }, 250);
+    }
+
     function ensureLiveTextStream() {
       if (__textEventSource && __textEventSource.readyState !== 2) return;
       const token = localStorage.getItem('pd_auth_token') || '';
@@ -1370,6 +1378,13 @@
           try {
             const payload = JSON.parse(ev.data);
             if (payload.sender_id && payload.sender_id === CLIENT_SENDER_ID) return;
+
+            // Real-time file change event (upload, delete, new local folder added, etc.)
+            if (payload.type === 'files_changed') {
+              scheduleAutoFilesRefresh();
+              return;
+            }
+
             const newText = payload.text || '';
             const txtEl = document.getElementById('sharedTextInput');
             if (payload.updated_at) {
@@ -2037,7 +2052,7 @@
             total: String(task.size)
           });
 
-          const headers = { 'Content-Type': 'application/octet-stream' };
+          const headers = { 'Content-Type': 'application/octet-stream', 'X-Sender-ID': CLIENT_SENDER_ID };
           const savedToken = localStorage.getItem('pd_auth_token');
           if (savedToken) headers['X-Auth-Token'] = savedToken;
 

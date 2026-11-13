@@ -151,6 +151,8 @@ func (sm *ServerManager) handleUploadChunk(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		completed = true
+		senderID := r.Header.Get("X-Sender-ID")
+		sm.BroadcastFilesChanged("chunk_upload_complete", senderID)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{

@@ -42,7 +42,7 @@ type ServerManager struct {
 func NewServerManager(cm *ConfigManager) *ServerManager {
 	return &ServerManager{
 		CM:         cm,
-		AppVersion: "v1.0.5",
+		AppVersion: "v1.0.6",
 		stopChan:   make(chan struct{}),
 		sseClients: make(map[chan string]struct{}),
 		textSeq:    time.Now().UnixMilli(),
@@ -370,6 +370,7 @@ func (sm *ServerManager) broadcastTextUpdate(text, senderID, source string, upda
 	sm.textSeq = updatedAt
 	seq := sm.textSeq
 	payloadBytes, _ := json.Marshal(map[string]interface{}{
+		"type":       "text",
 		"text":       text,
 		"sender_id":  senderID,
 		"source":     source,
@@ -385,6 +386,24 @@ func (sm *ServerManager) broadcastTextUpdate(text, senderID, source string, upda
 	}
 	sm.sseMu.Unlock()
 	return seq
+}
+
+func (sm *ServerManager) BroadcastFilesChanged(action, senderID string) {
+	sm.sseMu.Lock()
+	payloadBytes, _ := json.Marshal(map[string]interface{}{
+		"type":      "files_changed",
+		"action":    action, // "upload", "delete", "add_path", etc.
+		"sender_id": senderID,
+		"ts":        time.Now().UnixMilli(),
+	})
+	msg := string(payloadBytes)
+	for ch := range sm.sseClients {
+		select {
+		case ch <- msg:
+		default:
+		}
+	}
+	sm.sseMu.Unlock()
 }
 
 func (sm *ServerManager) handleTextStream(w http.ResponseWriter, r *http.Request) {
@@ -421,6 +440,7 @@ func (sm *ServerManager) handleTextStream(w http.ResponseWriter, r *http.Request
 
 	// Send initial snapshot immediately upon connection
 	initBytes, _ := json.Marshal(map[string]interface{}{
+		"type":       "text",
 		"text":       cfg.SharedText,
 		"sender_id":  "init",
 		"source":     cfg.SharedTextSource,
@@ -705,6 +725,9 @@ func (sm *ServerManager) handleDeleteFiles(w http.ResponseWriter, r *http.Reques
 		})
 	}
 
+	senderID := r.Header.Get("X-Sender-ID")
+	sm.BroadcastFilesChanged("delete", senderID)
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{"ok": true})
 }
 
@@ -776,6 +799,11 @@ func (sm *ServerManager) handleUpload(w http.ResponseWriter, r *http.Request) {
 		_ = dstFile.Close()
 		_ = srcFile.Close()
 		savedCount++
+	}
+
+	if savedCount > 0 {
+		senderID := r.Header.Get("X-Sender-ID")
+		sm.BroadcastFilesChanged("upload", senderID)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -907,6 +935,7 @@ func (sm *ServerManager) addLocalPathsToShare(paths []string) (int, error) {
 		_ = sm.CM.Update(func(c *Config) {
 			c.Items = append(newItems, c.Items...)
 		})
+		sm.BroadcastFilesChanged("add_paths", "")
 	}
 	return added, nil
 }
