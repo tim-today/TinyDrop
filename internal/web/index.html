@@ -228,15 +228,10 @@
     }
     .input:focus { border-color: var(--primary); }
 
-    /* PC Control Grid (Collapsible) */
+    /* PC Control Settings Panel (Collapsible) */
     .admin-grid {
-      display: grid;
-      grid-template-columns: 1.45fr 1fr;
-      gap: 16px;
+      display: block;
       margin-bottom: 16px;
-    }
-    @media (max-width: 860px) {
-      .admin-grid { grid-template-columns: 1fr; }
     }
     .panel {
       background: var(--card);
@@ -363,6 +358,30 @@
       gap: 6px;
     }
     .url-copy-bar input { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+
+    /* Main Action Grid: Dropzone & Connect QR */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+      align-items: stretch;
+    }
+    @media (max-width: 860px) {
+      .action-grid { grid-template-columns: 1fr; }
+    }
+    .action-panel {
+      margin-bottom: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .dropzone-action-panel {
+      justify-content: center;
+    }
+    .connect-action-panel {
+      padding: 16px 18px;
+    }
 
     /* Dropzone & Quick Add */
     .dropzone {
@@ -944,10 +963,27 @@
           </div>
         </div>
       </div>
+    </section>
 
-      <!-- QR Code & Network Panel -->
-      <div class="panel">
-        <div class="panel-title">
+    <!-- Two-Column Action Grid: Dropzone & Connect QR -->
+    <div id="actionGrid" class="action-grid" style="display:none;">
+      <!-- Dropzone / Quick Add Column -->
+      <section id="dropzoneSection" class="dropzone action-panel dropzone-action-panel">
+        <div class="dropzone-title">📥 Drop Files or Folders Here to Share Instantly</div>
+        <div class="dropzone-sub" id="dropzoneSub">Supports multi-select, folder drag-and-drop & 4MB chunked resumable uploads for large files</div>
+        <div class="dropzone-btns">
+          <button id="btnPcPickFile" class="btn btn-sm btn-primary" style="display:none;" onclick="pickSystem('file')">➕ Share Local Files</button>
+          <button id="btnPcPickDir" class="btn btn-sm btn-primary" style="display:none;" onclick="pickSystem('dir')">📁 Share Local Folder</button>
+          <button class="btn btn-sm" onclick="document.getElementById('uploadFilesInput').click()">⬆️ Upload Files</button>
+          <button class="btn btn-sm" onclick="document.getElementById('uploadDirInput').click()">📂 Upload Folder</button>
+          <input type="file" id="uploadFilesInput" multiple style="display:none;" onchange="uploadFileList(this.files); this.value='';">
+          <input type="file" id="uploadDirInput" webkitdirectory directory multiple style="display:none;" onchange="uploadFileList(this.files); this.value='';">
+        </div>
+      </section>
+
+      <!-- Connect QR & Network Column (with Access PIN) -->
+      <section id="connectSection" class="panel action-panel connect-action-panel" style="display:none;">
+        <div class="panel-title" style="margin-bottom:10px;">
           <span>📱 Scan to Connect (LAN & Tailscale)</span>
         </div>
         <div class="qr-box">
@@ -963,22 +999,8 @@
             Access PIN: <strong id="qrPwdDisplay" style="color:#a5b4fc;letter-spacing:1.5px;">------</strong>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- Drag & Drop / Quick Add Zone -->
-    <section id="dropzoneSection" class="dropzone" style="display:none;">
-      <div class="dropzone-title">📥 Drop Files or Folders Here to Share Instantly</div>
-      <div class="dropzone-sub" id="dropzoneSub">Supports multi-select, folder drag-and-drop & 4MB chunked resumable uploads for large files</div>
-      <div class="dropzone-btns">
-        <button id="btnPcPickFile" class="btn btn-sm btn-primary" style="display:none;" onclick="pickSystem('file')">➕ Share Local Files</button>
-        <button id="btnPcPickDir" class="btn btn-sm btn-primary" style="display:none;" onclick="pickSystem('dir')">📁 Share Local Folder</button>
-        <button class="btn btn-sm" onclick="document.getElementById('uploadFilesInput').click()">⬆️ Upload Files</button>
-        <button class="btn btn-sm" onclick="document.getElementById('uploadDirInput').click()">📂 Upload Folder</button>
-        <input type="file" id="uploadFilesInput" multiple style="display:none;" onchange="uploadFileList(this.files); this.value='';">
-        <input type="file" id="uploadDirInput" webkitdirectory directory multiple style="display:none;" onchange="uploadFileList(this.files); this.value='';">
-      </div>
-    </section>
+      </section>
+    </div>
 
     <!-- Shared Textbox / Cross-Device Clipboard -->
     <section id="textpadSection" class="textpad-card">
@@ -1141,11 +1163,10 @@
       state.showAdminPanel = !state.showAdminPanel;
       const sec = document.getElementById('adminSection');
       const btn = document.getElementById('toggleAdminConfigBtn');
-      sec.style.display = state.showAdminPanel ? 'grid' : 'none';
+      sec.style.display = state.showAdminPanel ? 'block' : 'none';
       if (state.showAdminPanel) {
         btn.classList.add('btn-primary');
         btn.textContent = '⚙️ Hide Settings';
-        renderAddressesAndQR();
       } else {
         btn.classList.remove('btn-primary');
         btn.textContent = '⚙️ Settings';
@@ -1238,13 +1259,28 @@
         roleBadge.className = 'badge badge-readonly';
       }
 
-      document.getElementById('adminSection').style.display = (state.isAdmin && state.showAdminPanel) ? 'grid' : 'none';
+      document.getElementById('adminSection').style.display = (state.isAdmin && state.showAdminPanel) ? 'block' : 'none';
       document.getElementById('openTempFinderBtn').style.display = state.isAdmin ? 'inline-flex' : 'none';
       document.getElementById('toggleAdminConfigBtn').style.display = state.isAdmin ? 'inline-flex' : 'none';
       document.getElementById('btnPcPickFile').style.display = state.isAdmin ? 'inline-flex' : 'none';
       document.getElementById('btnPcPickDir').style.display = state.isAdmin ? 'inline-flex' : 'none';
 
-      document.getElementById('dropzoneSection').style.display = state.canEdit ? 'block' : 'none';
+      const showDropzone = state.canEdit;
+      const showConnect = state.isAdmin;
+      document.getElementById('dropzoneSection').style.display = showDropzone ? 'flex' : 'none';
+      document.getElementById('connectSection').style.display = showConnect ? 'flex' : 'none';
+      const actionGridEl = document.getElementById('actionGrid');
+      if (showDropzone || showConnect) {
+        actionGridEl.style.display = 'grid';
+        if (showDropzone && showConnect) {
+          actionGridEl.style.gridTemplateColumns = '';
+        } else {
+          actionGridEl.style.gridTemplateColumns = '1fr';
+        }
+      } else {
+        actionGridEl.style.display = 'none';
+      }
+
       document.getElementById('batchActions').style.display = state.canEdit ? 'flex' : 'none';
       document.getElementById('thCheckbox').style.display = state.canEdit ? 'flex' : 'none';
 

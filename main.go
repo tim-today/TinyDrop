@@ -13,7 +13,7 @@ import (
 	"github.com/tim-today/TinyDrop/internal"
 )
 
-var Version = "v1.0.7"
+var Version = "v1.0.8"
 
 func init() {
 	runtime.LockOSThread()

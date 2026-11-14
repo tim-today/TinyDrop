@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -42,7 +43,7 @@ type ServerManager struct {
 func NewServerManager(cm *ConfigManager) *ServerManager {
 	return &ServerManager{
 		CM:         cm,
-		AppVersion: "v1.0.7",
+		AppVersion: "v1.0.8",
 		stopChan:   make(chan struct{}),
 		sseClients: make(map[chan string]struct{}),
 		textSeq:    time.Now().UnixMilli(),
@@ -81,7 +82,12 @@ func (sm *ServerManager) watchdogLoop() {
 			if !cfg.AutoKeepAlive {
 				continue
 			}
-			client := &http.Client{Timeout: 1500 * time.Millisecond}
+			client := &http.Client{
+				Timeout: 1500 * time.Millisecond,
+				Transport: &http.Transport{
+					Proxy: nil, // bypass environment proxy for localhost watchdog
+				},
+			}
 			pingURL := fmt.Sprintf("http://127.0.0.1:%d/api/ping", cfg.Port)
 			resp, err := client.Get(pingURL)
 			if err != nil || resp.StatusCode != http.StatusOK {
@@ -154,11 +160,30 @@ func (sm *ServerManager) makeClientToken(cfg Config) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+func isLoopbackAddr(remoteAddr string) bool {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		host = remoteAddr
+	}
+	host = strings.TrimPrefix(strings.TrimSuffix(host, "]"), "[")
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
 func (sm *ServerManager) isAdmin(r *http.Request, cfg Config) bool {
+	// 1. Direct cookie match
 	if c, err := r.Cookie("pd_admin"); err == nil && c.Value == cfg.AdminSecret {
 		return true
 	}
+	// 2. Header match
 	if r.Header.Get("X-Admin-Token") == cfg.AdminSecret {
+		return true
+	}
+	// 3. Native localhost/loopback request (browsing directly on the host machine)
+	if isLoopbackAddr(r.RemoteAddr) {
 		return true
 	}
 	return false
