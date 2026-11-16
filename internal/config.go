@@ -32,6 +32,7 @@ type Config struct {
 	ShareMode           string      `json:"share_mode"` // "map" or "copy"
 	TempDir             string      `json:"temp_dir"`
 	AutoKeepAlive       bool        `json:"auto_keep_alive"`
+	Autostart           bool        `json:"autostart"`
 	AdminSecret         string      `json:"admin_secret"`
 	SharedText          string      `json:"shared_text"`
 	SharedTextUpdatedAt int64       `json:"shared_text_updated_at"`

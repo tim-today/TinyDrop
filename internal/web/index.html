@@ -961,6 +961,17 @@
               <button class="btn btn-sm" onclick="changePort()">Apply</button>
             </div>
           </div>
+
+          <div class="config-row">
+            <div class="config-label">
+              Start Automatically at Login
+              <span>Launch TinyDrop silently in the background on system startup</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="cfgAutostart" onchange="saveConfig({autostart: this.checked})">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
       </div>
     </section>
@@ -1314,6 +1325,7 @@
         document.getElementById('cfgShareMode').value = data.share_mode || 'map';
         document.getElementById('cfgTempDirText').textContent = data.temp_dir || '';
         document.getElementById('cfgPort').value = data.port || 20999;
+        document.getElementById('cfgAutostart').checked = !!data.autostart;
         state.addresses = data.addresses || [];
         renderAddressesAndQR();
       }

@@ -178,6 +178,9 @@ func handleWinCommand(cmdID int) {
 		})
 		_ = OpenBrowser(adminURL)
 	case 99:
+		if winTraySM != nil {
+			winTraySM.Stop()
+		}
 		procShellNotifyIconW.Call(nimDelete, uintptr(unsafe.Pointer(&nid)))
 		procPostQuitMessage.Call(0)
 		os.Exit(0)

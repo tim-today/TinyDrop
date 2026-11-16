@@ -67,6 +67,9 @@ func goTrayCallback(actionID C.int) {
 		})
 		_ = OpenBrowser(adminURL)
 	case 99:
+		if globalTraySM != nil {
+			globalTraySM.Stop()
+		}
 		C.stopMacTray()
 		os.Exit(0)
 	}

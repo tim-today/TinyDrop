@@ -43,7 +43,7 @@ type ServerManager struct {
 func NewServerManager(cm *ConfigManager) *ServerManager {
 	return &ServerManager{
 		CM:         cm,
-		AppVersion: "v1.0.8",
+		AppVersion: "v1.0.9",
 		stopChan:   make(chan struct{}),
 		sseClients: make(map[chan string]struct{}),
 		textSeq:    time.Now().UnixMilli(),
@@ -53,6 +53,25 @@ func NewServerManager(cm *ConfigManager) *ServerManager {
 func (sm *ServerManager) StartAndKeepAlive() {
 	go sm.startServerInstance()
 	go sm.watchdogLoop()
+}
+
+func (sm *ServerManager) Stop() {
+	sm.mu.Lock()
+	srv := sm.httpServer
+	sm.httpServer = nil
+	sm.mu.Unlock()
+
+	select {
+	case <-sm.stopChan:
+	default:
+		close(sm.stopChan)
+	}
+
+	if srv != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		_ = srv.Shutdown(ctx)
+		cancel()
+	}
 }
 
 func (sm *ServerManager) Restart() {
@@ -129,6 +148,7 @@ func (sm *ServerManager) startServerInstance() {
 	mux.HandleFunc("/api/pc/pick", sm.handlePCPick)
 	mux.HandleFunc("/api/pc/add-paths", sm.handlePCAddPaths)
 	mux.HandleFunc("/api/pc/open-finder", sm.handlePCOpenFinder)
+	mux.HandleFunc("/api/pc/open-dashboard", sm.handlePCOpenDashboard)
 	mux.HandleFunc("/api/pc/config", sm.handlePCConfig)
 
 	addr := fmt.Sprintf("0.0.0.0:%d", cfg.Port)
@@ -290,6 +310,7 @@ func (sm *ServerManager) handleStatus(w http.ResponseWriter, r *http.Request) {
 		"can_edit":          sm.canManage(r, cfg),
 		"port":              cfg.Port,
 		"auto_keep_alive":   cfg.AutoKeepAlive,
+		"autostart":         IsAutostartEnabled(),
 	}
 
 	if admin {
@@ -1052,6 +1073,20 @@ func (sm *ServerManager) handlePCOpenFinder(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, map[string]interface{}{"ok": true})
 }
 
+func (sm *ServerManager) handlePCOpenDashboard(w http.ResponseWriter, r *http.Request) {
+	cfg := sm.CM.GetSnapshot()
+	if !sm.isAdmin(r, cfg) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Host admin permission required"})
+		return
+	}
+	adminURL := fmt.Sprintf("http://127.0.0.1:%d/api/admin/entry?secret=%s", cfg.Port, cfg.AdminSecret)
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		_ = OpenBrowser(adminURL)
+	}()
+	writeJSON(w, http.StatusOK, map[string]interface{}{"ok": true, "admin_url": adminURL})
+}
+
 func (sm *ServerManager) handlePCConfig(w http.ResponseWriter, r *http.Request) {
 	cfg := sm.CM.GetSnapshot()
 	if !sm.isAdmin(r, cfg) {
@@ -1069,10 +1104,17 @@ func (sm *ServerManager) handlePCConfig(w http.ResponseWriter, r *http.Request) 
 		ShareMode       *string `json:"share_mode"`
 		TempDir         *string `json:"temp_dir"`
 		AutoKeepAlive   *bool   `json:"auto_keep_alive"`
+		Autostart       *bool   `json:"autostart"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid config parameters"})
 		return
+	}
+
+	if req.Autostart != nil {
+		if err := SetAutostart(*req.Autostart); err != nil {
+			log.Printf("[Autostart] Failed to set autostart: %v", err)
+		}
 	}
 
 	portChanged := false
@@ -1116,6 +1158,9 @@ func (sm *ServerManager) handlePCConfig(w http.ResponseWriter, r *http.Request) 
 		}
 		if req.AutoKeepAlive != nil {
 			c.AutoKeepAlive = *req.AutoKeepAlive
+		}
+		if req.Autostart != nil {
+			c.Autostart = *req.Autostart
 		}
 	})
 

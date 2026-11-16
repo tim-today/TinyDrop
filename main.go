@@ -13,7 +13,7 @@ import (
 	"github.com/tim-today/TinyDrop/internal"
 )
 
-var Version = "v1.0.8"
+var Version = "v1.0.9"
 
 func init() {
 	runtime.LockOSThread()
@@ -41,10 +41,18 @@ func main() {
 		log.Fatalf("Failed to initialize config: %v", err)
 	}
 
+	targetPort := cm.GetSnapshot().Port
 	if *portFlag > 0 && *portFlag <= 65535 {
+		targetPort = *portFlag
 		_ = cm.Update(func(c *internal.Config) {
 			c.Port = *portFlag
 		})
+	}
+
+	// Single-instance guard: if TinyDrop is already running on this port, activate it and exit cleanly.
+	if internal.ActivateExistingInstance(targetPort) {
+		log.Printf("TinyDrop is already running on port %d. Activated existing dashboard.", targetPort)
+		return
 	}
 
 	sm := internal.NewServerManager(cm)
