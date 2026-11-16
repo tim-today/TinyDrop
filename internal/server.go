@@ -43,7 +43,7 @@ type ServerManager struct {
 func NewServerManager(cm *ConfigManager) *ServerManager {
 	return &ServerManager{
 		CM:         cm,
-		AppVersion: "v1.0.9",
+		AppVersion: "v1.0.10",
 		stopChan:   make(chan struct{}),
 		sseClients: make(map[chan string]struct{}),
 		textSeq:    time.Now().UnixMilli(),
@@ -275,7 +275,8 @@ func (sm *ServerManager) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "File sharing is currently disabled by the host"})
 		return
 	}
-	if strings.TrimSpace(req.Password) != cfg.Password {
+	pwd := strings.ToUpper(strings.TrimSpace(req.Password))
+	if pwd != strings.ToUpper(cfg.Password) {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid 6-character PIN code, please try again"})
 		return
 	}
@@ -1139,7 +1140,7 @@ func (sm *ServerManager) handlePCConfig(w http.ResponseWriter, r *http.Request) 
 			c.Password = Generate6DigitPassword()
 			c.PasswordVersion = GenerateRandomHex(8)
 		} else if req.Password != nil {
-			pwd := strings.TrimSpace(*req.Password)
+			pwd := strings.ToUpper(strings.TrimSpace(*req.Password))
 			if len(pwd) == 6 && pwd != c.Password {
 				c.Password = pwd
 				c.PasswordVersion = GenerateRandomHex(8)

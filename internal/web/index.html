@@ -912,7 +912,7 @@
               <span>Clients authenticate once and stay signed in until PIN changes</span>
             </div>
             <div style="display:flex;gap:6px;align-items:center;">
-              <input type="text" id="cfgPassword" class="input" maxlength="6" style="width:108px;text-align:center;font-weight:700;letter-spacing:3px;color:#a5b4fc;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">
+              <input type="text" id="cfgPassword" class="input" maxlength="6" style="width:108px;text-align:center;font-weight:700;letter-spacing:3px;color:#a5b4fc;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
               <button class="btn btn-sm" onclick="savePassword()">Save</button>
               <button class="btn btn-sm" onclick="saveConfig({random_password: true})">🎲 Random</button>
             </div>
@@ -1138,7 +1138,7 @@
       <div class="logo-icon" style="margin: 0 auto 12px;"><img src="/logo.svg" alt="TD"></div>
       <h2 style="font-size:18px;margin-bottom:6px;">Enter Access PIN</h2>
       <p style="font-size:12px;color:var(--muted);">Enter the 6-character alphanumeric PIN code shown on the host. Your session stays active until the host changes the PIN.</p>
-      <input type="text" id="loginPinInput" class="pin-input" maxlength="6" placeholder="••••••" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeyup="if(event.key==='Enter') submitLogin()">
+      <input type="text" id="loginPinInput" class="pin-input" maxlength="6" placeholder="••••••" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()" onkeyup="if(event.key==='Enter') submitLogin()">
       <div id="loginError" style="color:var(--danger);font-size:12px;margin-bottom:10px;min-height:18px;"></div>
       <button class="btn btn-primary" style="width:100%;padding:11px;" onclick="submitLogin()">🔓 Unlock TinyDrop</button>
     </div>
@@ -1559,7 +1559,7 @@
     }
 
     async function submitLogin() {
-      const pwd = document.getElementById('loginPinInput').value.trim();
+      const pwd = document.getElementById('loginPinInput').value.trim().toUpperCase();
       const errEl = document.getElementById('loginError');
       errEl.textContent = '';
       const res = await fetch('/api/auth/login', {
@@ -1937,7 +1937,7 @@
     }
 
     function savePassword() {
-      const pwd = document.getElementById('cfgPassword').value.trim();
+      const pwd = document.getElementById('cfgPassword').value.trim().toUpperCase();
       if (pwd.length !== 6) {
         showToast('⚠️ PIN code must be exactly 6 characters');
         return;

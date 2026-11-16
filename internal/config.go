@@ -147,7 +147,7 @@ func (cm *ConfigManager) GetSnapshot() Config {
 	return cp
 }
 
-const alphanumericCharset = "23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+const alphanumericCharset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func Generate6DigitPassword() string {
 	b := make([]byte, 6)
